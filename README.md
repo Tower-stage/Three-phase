@@ -5,128 +5,120 @@ https://deepwiki.com/KaihangShi/Ternary-Phase-Diagram
 
 这段代码是基于**Flory-Huggins高分子溶液理论**，用于计算和绘制**三元相图（聚合物 - 溶剂 - 非溶剂/小分子）**的MATLAB脚本。
 
-为了计算不同溶剂条件下的相线变化，你需要理解这四个脚本的功能，并知道如何修改热力学参数。以下是详细的解析与操作指南：
-
-### 一、 代码功能深度解析
-
-在Flory-Huggins理论中，通常有三个组分：
-*   **组分 1 (phi1)**：非溶剂 / 小分子 (Nonsolvent / Small molecule)
-*   **组分 2 (phi2)**：溶剂 (Solvent)
-*   **组分 3 (phi3)**：聚合物 (Polymer)
-
-这四个脚本分别计算三元相图的四个关键部分，它们都依赖于一个隐藏的核心函数 **`fun.m`**（该函数包含了化学势或吉布斯自由能的计算公式）。
-
-#### 1. `src/main.m` (Binodal Line / 双节点线 / 浊点线)
-*   **作用**：计算**双节点线（共存曲线）**和**结线（Tie-lines）**。这是实际相变发生的边界。
-*   **原理**：给定稀相中的聚合物浓度（`ix3d`），通过非线性优化 `fmincon` 寻找浓相中的各组分浓度以及稀相中的非溶剂浓度，使得两相中各组分的**化学势相等**。
-*   **变量解析**：
-    *   `x(1)` 和 `x(2)`：代表浓相中的组分1和组分3的体积分数。
-    *   `x(3)`：代表稀相中的组分1的体积分数。
-    *   最后将两相的数据对（稀相和浓相）成对写入 `binodal_results.csv`。
-
-#### 2. `Spinodal/main.m` (Spinodal Line / 旋节线)
-*   **作用**：计算**旋节线**（系统处于绝对不稳定的边界）。
-*   **原理**：给定聚合物浓度 `ix3`，利用 `fsolve` 求解混合吉布斯自由能的二阶导数（Hessian矩阵行列式）等于0的点。
-*   **注意**：这里用的是 `fsolve`（解方程），而不是 `fmincon`（求极值）。
-
-#### 3. `Critical_point/main.m` (Critical Point / 临界点)
-*   **作用**：计算双节点线和旋节线相切交汇的**临界点**。
-*   **原理**：寻找吉布斯自由能三阶导数为0的点。
-
-#### 4. `LLE/main.m` (Liquid-Liquid Equilibrium / 单一液液平衡线)
-*   **作用**：不使用循环，针对某一个特定的初始猜测值 `x0`，单次计算一条结线（两相平衡点）。通常用于调试 `fun.m` 和测试初始猜测值是否容易收敛。
+当前仓库已针对 **PM6（聚合物给体）- L8-Bo（小分子受体）- 溶剂（Toluene / o-Xylene）** 体系进行了重构与参数化。
 
 ---
 
-### 二、 如何使用它计算“不同溶剂条件”下的相线变化？
+## 项目结构（重构后）
 
-**“不同溶剂条件”在代码底层的体现是 Flory-Huggins 相互作用参数（$\chi$ 参数，Chi parameter）的改变。** 
-
-系统中存在三个 $\chi$ 参数：
-1.  $\chi_{12}$ (非溶剂-溶剂)
-2.  $\chi_{23}$ (溶剂-聚合物)
-3.  $\chi_{13}$ (非溶剂-聚合物，代码中已提取为全局变量 `iX13`)
-
-#### 实操指导步骤：
-
-#### 第一步：定位并修改 `fun.m` 中的参数
-这段代码虽然主程序里只有 `iX13`，但 $\chi_{12}$、$\chi_{23}$ 以及分子体积比（链长 $m_1, m_2, m_3$）必定被硬编码在同级目录的 **`fun.m`** 文件中。
-*   **如果要更换溶剂**：你需要查阅文献或使用基团贡献法（如Hansen溶解度参数）计算新的溶剂与聚合物之间的 $\chi_{23}$，以及溶剂与非溶剂之间的 $\chi_{12}$。
-*   打开 `fun.m`，找到代表 $\chi_{12}$ 和 $\chi_{23}$ 的变量，并替换为你的新溶剂参数。
-    *   *良溶剂 (Good solvent)*：$\chi_{23}$ 较小（通常 < 0.5）。
-    *   *劣溶剂 (Poor solvent)*：$\chi_{23}$ 较大。
-
-#### 第二步：在主程序修改 `iX13`
-在主程序（如 `src/main.m`）中：
-```matlab
-% interaction parameter nonsolvent(1)-polymer(3)
-iX13 = 1.7; % <-- 如果你的非溶剂和小分子没变，这个值可以保持；如果变了，需修改。
+```
+src/
+├── binodal-PM6-L8Bo-Tol/      # 甲苯体系 Binodal + Tie line 计算
+│   ├── main.m
+│   └── fun.m
+├── binodal-PM6-L8Bo-OXy/      # 邻二甲苯体系 Binodal + Tie line 计算
+│   ├── main.m
+│   └── fun.m
+├── spinodal-gemini/           # 旋节线计算（网格算法，已解决触底问题）
+│   ├── main.m
+│   └── fun.m
+├── Critical_point/            # 临界点计算
+│   ├── find_critical_point_Tol.m
+│   └── find_critical_point_OXy.m
+├── binodal-Gemini/            # Gemini 重构版模板（DMF-THF-PIM1 参考体系）
+├── legacy/                    # 旧版代码存档（已弃用）
+│   ├── main_original.m / fun_original.m
+│   ├── Spinodal_original/
+│   ├── LLE_original/
+│   └── Critical_point_original_*.m
+└── readme.md                  # 参数速查表与调试指南
 ```
 
-#### 第三步：调整初始猜测值 `x0`（最关键、最容易报错的一步）
-当溶剂改变（即 $\chi$ 参数改变）后，相图的形状和位置会发生巨大偏移。**以前能够收敛的初始猜测值 `x0` 会导致 `fmincon` 报错或找不到解。**
+> **注意**：旧版 `src/Spinodal/`、`src/LLE/` 已移入 `legacy/`。前者已被 `spinodal-gemini` 的网格算法完全替代；后者的单次调试功能已包含在 Binodal 循环中。
 
-*   **对于 Binodal (`src/main.m`)**:
-    ```matlab
-    % x0 =[浓相phi1; 浓相phi3; 稀相phi1]
-    x0 = [0.1; 0.7; 0.25]; 
-    ```
-    如果你换了更强的溶剂，互溶区变大，你需要相应地微调 `x0`。你可以先用 `LLE/main.m` 试错几个 `x0`，看 `f` (残差) 是否能收敛到接近 0（比如 `1e-10`）。
+---
 
-#### 第四步：执行与调试顺序
-1.  **先计算旋节线 (Spinodal)**：旋节线的数学性质更好（解方程即可），对初始值相对不那么敏感。先运行 `Spinodal/main.m`，你可以大致看出相分离区域的轮廓。
-2.  **再计算双节点线 (Binodal)**：根据旋节线的轮廓，合理推测 Binodal 曲线中 `x0` 的分布，然后运行 `src/main.m`。
-3.  **观察 `residual`**：查看生成的 `binodal_results.csv` 中的第一列 `residual`（残差）。如果残差很大（比如大于 `1e-4`），说明该点没有真正收敛，得到的数据是错的，需要缩小 `base` 步长或调整那一点的 `x0`。
+## 快速开始：计算完整四图元相图
 
-#### 第五步：可视化
-MATLAB运行完毕后，你会得到各个组分的体积分数序列。你需要借助MATLAB的第三方三元相图工具包（如 `ternplot`）或者将CSV导入 **Origin** 软件中，使用 Origin 的 Ternary Plot 功能绘制相图，直观对比不同溶剂（不同参数下）两相区的扩大或缩小。
+你的目标是得到 **Critical Point + Spinodal + Binodal + Tie line**。
 
-**总结：你的工作重心不在于修改上面这四个脚本的逻辑，而在于修改 `fun.m` 中的热力学参数，并在报错不收敛时耐心调整 `x0`。**
+### 1. Spinodal（旋节线）
 
-# 修改过程
+```matlab
+cd src/spinodal-gemini
+main
+```
 
+采用**网格算法**直接提取 `det(G'')=0` 的等高线，无需担心"触底"问题。运行后数据存储在变量 `xsol` 中。
 
-| Parameter | File | Line(s) | Description |
+### 2. Binodal + Tie line（双节点线 + 结线）
+
+```matlab
+cd src/binodal-PM6-L8Bo-Tol   % 或 binodal-PM6-L8Bo-OXy
+main
+```
+
+运行后生成 `binodal_PM6_L8Bo_*.csv`。**CSV 中每相邻两行即构成一条 Tie line**（第 `2i-1` 行为浓相，第 `2i` 行为稀相），无需单独计算 Tie line。
+
+### 3. Critical Point（临界点）
+
+```matlab
+cd src/Critical_point
+find_critical_point_Tol   % 或 find_critical_point_OXy
+```
+
+策略：**先计算 Spinodal 曲线，再在 Spinodal 上寻找三阶条件变号点**，通过线性插值得到精确临界点。结果保存为 `critical_point_*.csv`。
+
+---
+
+## 关键参数速查
+
+| 参数 | Tol 体系 | O-Xy 体系 | 物理意义 |
 |---|---|---|---|
-| `v1`, `v2`, `v3` | `fun.m` | 24–28 | Molar volumes of nonsolvent, solvent, polymer |
-| `g23` | `fun.m` | 55 | Solvent–polymer interaction parameter |
-| `p1`–`p5` | `fun.m` | 119–123 | Polynomial coefficients for nonsolvent–solvent `g12` |
-| `iX13` | `main.m` | 24 | Nonsolvent–polymer interaction parameter |
-| `x0` | `main.m` | 10 | Initial guess (adjust if solver doesn't converge) |
+| `v1` | 1132.1 | 1132.1 | L8-Bo 摩尔体积 [cm³/mol] |
+| `v2` | 106.3 | 120.6 | 溶剂摩尔体积 |
+| `v3` | 1743900 | 1743900 | PM6 摩尔体积 (DP≈1500) |
+| `X13` | 0.55 | 0.55 | L8-Bo/PM6 相互作用参数 |
+| `g23` (bb) | 0.3852 | 0.4120 | 溶剂/PM6 相互作用参数 |
+| `p1-p5` | [见下 Tol] | [见下 O-Xy] | L8-Bo/溶剂 g₁₂ 多项式系数 |
 
- 接下来需要拟合得出小分子-溶液的p1-p5参数，
+**Tol 体系 g₁₂ 系数：** `21.0142, -53.8880, 50.9171, -24.4012, -1.8878`
 
- ## 基团数量收集
+**O-Xy 体系 g₁₂ 系数：** `16.6738, -40.8682, 39.6207, -19.3621, -1.5993`
+
+---
+
+## 调试指南
+
+- **Binodal 大量迭代失败**：微调 `x0_default`（初始猜测值），或检查 `iX13` 是否合理。
+- **`iX13` 取值**：`readme.md` 推荐 **0.55**；`spinodal-gemini` 中实际调试用 **0.447**。两者差异较大，若相图形状异常可尝试切换。
+- **临界点未找到**：若 `crit_val` 未变号，说明当前参数下临界点可能落在网格边缘，可尝试增大网格分辨率（`linspace(..., 1200)`）或微调 `X13`。
+- **可视化**：所有 CSV 均可直接导入 **Origin** → Plot → Ternary 绘制三元相图。
+
+---
+
+## 历史修改记录
+
+| Parameter | File | Description |
+|---|---|---|
+| `v1`, `v2`, `v3` | `fun.m` | 摩尔体积 |
+| `g23` (bb) | `fun.m` | 溶剂–聚合物作用参数 |
+| `p1`–`p5` | `fun.m` | 非溶剂–溶剂 `g12` 多项式系数 |
+| `iX13` | `main.m` | 非溶剂–聚合物作用参数 |
+| `x0` | `main.m` | 初始猜测（不收敛时调整） |
+
+---
+
+## 基团数量收集
+
 groups_Tol = {9: 5, 10: 1}  # Toluene: 5*AC, 1*ACCH3
 groups_OXY = {9: 4, 10: 2}  # o-Xylene: 4*AC, 2*ACCH3
-groups_L8-Bo = {1: 8, 2: 28, 1: 8, 3: 4, 9: 12, 11: 4, 18: 2, 25: 4, 39: 5, 49: 4} #L8-Bo
+groups_L8-Bo = {1: 8, 2: 28, 1: 8, 3: 4, 9: 12, 11: 4, 18: 2, 25: 4, 39: 5, 49: 4}
 
-SMILES_L8-Bo =CCCCCCC(CCCC)Cc1c(C=C2C(=O)c3cc(F)c(F)cc3C2=C(C#N)C#N)sc2c1sc1c3c4nsnc4c4c5sc6c(CC(CCCC)CCCCCC)c(C=C7C(=O)c8cc(F)c(F)cc8C7=C(C#N)C#N)sc6c5n(CC(CC)CCCC)c4c3n(CC(CC)CCCC)c21
+SMILES_L8-Bo = CCCCCCC(CCCC)Cc1c(C=C2C(=O)c3cc(F)c(F)cc3C2=C(C#N)C#N)sc2c1sc1c3c4nsnc4c4c5sc6c(CC(CCCC)CCCCCC)c(C=C7C(=O)c8cc(F)c(F)cc8C7=C(C#N)C#N)sc6c5n(CC(CC)CCCC)c4c3n(CC(CC)CCCC)c21
+
 ## P值收集
 L8 : Toluene
 21.0142 -53.8880 50.9171 -24.4012 -1.8878
 L8 : o-Xylene
 16.6738 -40.8682 39.6207 -19.3621 -1.5993
-
-
-# 解算三元结构
-## 1. 准备计算最好算的Spinodal
-> 根据示例图像，发现Tol的图线更符合常规规律，准备激活对应区间，计算Tol-THF-PIM三相线情况
-### 1.1 先改fun.m，包含v1,v2,v3,g23,p1-p5
-- v1-v3已激活Tol对应值
-- g23为THF-PS作用参数，在本体系内无需修改
-- p1-p5未发现可激活部分，选用下面的Q mark部分作为替代
-### 1.2 再改main.m
-- 需要修改ix13，没给，改着玩玩，看看线怎么跑
-- 需要修改x0,只是一个起点初始值，随便乱改就行
-
-### 1.3 解算问题
-- 相线无法触底，准备回调至DMF线，曲线依然没有出现触底，求助AI
-- 已成功解决触底问题，重写为网格算法，完美，后面就是猛改参数了
-- 重构版中的main函数里没有任何需要修改的部分，可以不看
-- 正在修改fun.m为四种体系中的参数
-
-### 1.4 曲线的控制
-- x13(ix13)决定了开口
-- x23(g23)决定了峰值
-- V3(分子量)也会影响开口
