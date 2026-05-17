@@ -19,8 +19,11 @@ r = v1 / v3
 X13 = 0.55           # L8-Bo/PM6
 g23 = 0.4120         # o-Xy/PM6
 
-# L8-Bo / o-Xylene 多项式系数
-p1, p2, p3, p4, p5 = 16.6738, -40.8682, 39.6207, -19.3621, -1.5993
+# L8-Bo / o-Xylene 多项式系数（HSP 估算，线性模型：0.75 -> 0.55）
+p1, p2, p3, p4, p5 = 0, 0, 0, -0.2000, 0.7500
+
+# 若验证 Tol 体系，请替换为：
+# v2 = 106.3; g23 = 0.3852; p1,p2,p3,p4,p5 = 0,0,0,-0.2000,0.6000
 
 # ========================= 核心计算函数 ==========================
 def fun(x, ix3d, iX13):
@@ -100,8 +103,8 @@ for u2 in u2_test:
     g = p1*u2**4 + p2*u2**3 + p3*u2**2 + p4*u2 + p5
     print(f"  u2 = {u2:.2f}  ->  g12 = {g:+.4f}")
 
-print("\n注意：g12 在所有组成下均为负值且绝对值很大（-1.6 ~ -5.8）。")
-print("这可能导致 Gibbs 自由能表面异常平坦，使数值优化困难。\n")
+print("\n注意：g12 已基于 HSP 重新估算，当前为正值且在合理范围（0.55 ~ 0.75）。")
+print("若相图仍异常，请检查 X13、g23 及初始猜测值。\n")
 
 
 # ========================= 诊断 2：逐点求解并观察成功率 ==========================
@@ -138,7 +141,8 @@ for i, ix3d in enumerate(ix3d_values):
     x2d_calc = 1 - x[2] - ix3d
     phase_diff = abs(x[0] - x[2]) + abs(x[1] - x2d_calc)
 
-    is_success = f < 1e-7 and phase_diff > 1e-3
+    comp_diff = abs((1 - x[0] - x[1]) - ix3d)
+    is_success = f < 1e-7 and phase_diff > 1e-3 and comp_diff > 0.01
     if is_success:
         success_count += 1
         x0 = x.copy()  # 热启动
@@ -149,7 +153,7 @@ for i, ix3d in enumerate(ix3d_values):
     else:
         x0 = x0_default.copy()
 
-    status = "SUCCESS" if is_success else f"FAIL(f={f:.2e},pd={phase_diff:.2e})"
+    status = "SUCCESS" if is_success else f"FAIL(f={f:.2e},pd={phase_diff:.2e},cd={comp_diff:.2e})"
     print(f"  i={i+1:2d}, ix3d={ix3d:.4e} -> {status}")
 
 print(f"\n成功率: {success_count}/{nloop} = {success_count/nloop*100:.1f}%")
@@ -174,8 +178,8 @@ if len(results) > 0:
     ax.plot(x1d_list, x3d_list, 'ro-', label='Dilute phase arm', markersize=4)
 
     # 画 tie lines
-    for r in results:
-        ax.plot([r['x1c'], r['x1d']], [r['x3c'], r['x3d']], 'g--', alpha=0.4, linewidth=0.8)
+    for res_item in results:
+        ax.plot([res_item['x1c'], res_item['x1d']], [res_item['x3c'], res_item['x3d']], 'g--', alpha=0.4, linewidth=0.8)
 
     ax.set_xlabel('Volume fraction of L8-Bo (x1)')
     ax.set_ylabel('Volume fraction of PM6 (x3)')

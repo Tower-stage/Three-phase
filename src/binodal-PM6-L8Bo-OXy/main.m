@@ -6,7 +6,6 @@ options = optimoptions('fmincon','MaxIterations',10000,'OptimalityTolerance',1e-
 
 % 初始猜测值 [浓相phi1(L8Bo); 浓相phi2(oXy); 稀相phi1(L8Bo)]
 x0_default = [0.2; 0.5; 0.5];
-x0 = x0_default;
 
 % 边界保护
 lb = [1e-6; 1e-6; 1e-6];
@@ -18,7 +17,7 @@ b = 1 - 1e-6;
 
 % L8-Bo / PM6 相互作用参数
 % 调试提示：若相图异常，可尝试 [0.40, 0.45, 0.447, 0.50, 0.55]
-iX13 = 0.55;
+iX13 = 0.65;
 
 nloop = 60;
 ix3d_values = logspace(-5, log10(0.3), nloop);
@@ -27,7 +26,6 @@ xsol = NaN(2*nloop, 4);
 fail_log = {};  % 记录失败详情以便分析
 
 success_count = 0;
-consecutive_fail = 0;
 
 for i = 1:nloop
     ix3d = ix3d_values(i);
@@ -36,7 +34,7 @@ for i = 1:nloop
     ub(3) = 1 - ix3d - 1e-6;
 
     fun_anon = @(x) fun(x, ix3d, iX13);
-    [x, f] = fmincon(fun_anon, x0, A, b, [], [], lb, ub, [], options);
+    [x, f] = fmincon(fun_anon, x0_default, A, b, [], [], lb, ub, [], options);
 
     x2d_calc = 1 - x(3) - ix3d;
     x3c = 1 - x(1) - x(2);
@@ -50,7 +48,6 @@ for i = 1:nloop
     is_valid = (f < 1e-7) && (phase_diff > 1e-3) && (comp_diff > 0.01);
 
     if is_valid
-        x0 = x;
         j = i*2;
         xsol(j-1,1) = f;
         xsol(j-1,2) = x(1);            % phi1 (L8-Bo)
@@ -63,24 +60,15 @@ for i = 1:nloop
         xsol(j,4) = x2d_calc;          % phi2 (o-Xylene)
 
         success_count = success_count + 1;
-        consecutive_fail = 0;
         fprintf('迭代 %3d 成功 | ix3d=%.4e | f=%.2e | pd=%.3f | cd=%.3f | 浓相=[%.3f,%.3f,%.3f] 稀相=[%.3f,%.3f,%.3f]\n', ...
             i, ix3d, f, phase_diff, comp_diff, x(1), x(2), x3c, x(3), x2d_calc, ix3d);
     else
-        consecutive_fail = consecutive_fail + 1;
         fail_log{end+1} = sprintf(...
             '迭代 %3d 失败 | ix3d=%.4e | f=%.2e | pd=%.3f | cd=%.3f | 原因: %s | x=[%.3f,%.3f,%.3f]', ...
             i, ix3d, f, phase_diff, comp_diff, ...
             get_fail_reason(f, phase_diff, comp_diff), x(1), x(2), x(3));
         fprintf('迭代 %3d 失败 | ix3d=%.4e | f=%.2e | pd=%.3f | cd=%.3f | 原因: %s\n', ...
             i, ix3d, f, phase_diff, comp_diff, get_fail_reason(f, phase_diff, comp_diff));
-
-        % 若连续失败超过 5 次，尝试回退到默认初值
-        if consecutive_fail >= 5
-            x0 = x0_default;
-            consecutive_fail = 0;
-            fprintf('  -> 连续失败超限，重置初值为默认值\n');
-        end
     end
 end
 
