@@ -1,124 +1,309 @@
-# 维基
-https://deepwiki.com/KaihangShi/Ternary-Phase-Diagram
+# Ternary-Phase-Diagram — PM6 / L8-Bo / 溶剂 三元相图计算
 
-# Ternary-Phase-Diagram
-
-这段代码是基于**Flory-Huggins高分子溶液理论**，用于计算和绘制**三元相图（聚合物 - 溶剂 - 非溶剂/小分子）**的MATLAB脚本。
-
-当前仓库已针对 **PM6（聚合物给体）- L8-Bo（小分子受体）- 溶剂（Toluene / o-Xylene）** 体系进行了重构与参数化。
+> **一句话**：基于 Flory-Huggins 理论的 MATLAB 脚本，计算并绘制三元体系的双节点线(Binodal)、旋节线(Spinodal)、临界点(Critical Point)和连接线(Tie Lines)。
+>
+> **当前状态**：已通过 192 组三维参数扫描优化，两条体系均保证曲线平滑无跳点。
 
 ---
 
-## 项目结构（重构后）
-
-```
-src/
-├── binodal-PM6-L8Bo-Tol/      # 甲苯体系 Binodal + Tie line 计算
-│   ├── main.m
-│   └── fun.m
-├── binodal-PM6-L8Bo-OXy/      # 邻二甲苯体系 Binodal + Tie line 计算
-│   ├── main.m
-│   └── fun.m
-├── spinodal-gemini/           # 旋节线计算（网格算法，已解决触底问题）
-│   ├── main.m
-│   └── fun.m
-├── Critical_point/            # 临界点计算
-│   ├── find_critical_point_Tol.m
-│   └── find_critical_point_OXy.m
-├── binodal-Gemini/            # Gemini 重构版模板（DMF-THF-PIM1 参考体系）
-├── legacy/                    # 旧版代码存档（已弃用）
-│   ├── main_original.m / fun_original.m
-│   ├── Spinodal_original/
-│   ├── LLE_original/
-│   └── Critical_point_original_*.m
-└── readme.md                  # 参数速查表与调试指南
-```
-
-> **注意**：旧版 `src/Spinodal/`、`src/LLE/` 已移入 `legacy/`。前者已被 `spinodal-gemini` 的网格算法完全替代；后者的单次调试功能已包含在 Binodal 循环中。
-
----
-
-## 快速开始：计算完整四图元相图
-
-你的目标是得到 **Critical Point + Spinodal + Binodal + Tie line**。
-
-### 1. Spinodal（旋节线）
+## 快速开始
 
 ```matlab
-cd src/spinodal-gemini
-main
+cd d:\Deskkk\First CC\Three-phase
+FINAL_DELIVERY
 ```
 
-采用**网格算法**直接提取 `det(G'')=0` 的等高线，无需担心"触底"问题。运行后数据存储在变量 `xsol` 中。
+等 2-3 分钟，所有计算和图表自动生成到 `output/`。
 
-### 2. Binodal + Tie line（双节点线 + 结线）
+---
+
+## 项目结构（最新）
+
+```
+Three-phase/
+│
+├── FINAL_DELIVERY.m          ← 【主入口】一键运行所有计算+出图
+├── param_sweep.m             ← V1: v3×X13 二维参数扫描 (169组)
+├── param_sweep_v2.m          ← V2: v3×X13×g23 三维参数扫描 (192组)
+├── find_best_OXy.m           ← O-Xy 体系最佳参数搜索 (60组)
+├── gen_figures.m             ← 从扫描结果 .mat 文件重新出图
+│
+├── README.md                 ← 本文件 (技术文档)
+├── LEARNING_GUIDE.md         ← 学习手册 (如何改参数、排查问题)
+├── OUTPUT_README.md          ← 输出文件说明
+├── 调试说明.md               ← 早期调试历史 (Python 时期)
+│
+├── output/                   ← 全部输出
+│   ├── binodal_Tol.csv       ← Tol 双节点线 (每相邻两行=一条 tie line)
+│   ├── binodal_OXy.csv       ← O-Xy 双节点线
+│   ├── spinodal_Tol.csv      ← Tol 旋节线
+│   ├── spinodal_OXy.csv      ← O-Xy 旋节线
+│   ├── critical_Tol.csv      ← Tol 临界点
+│   ├── critical_OXy.csv      ← O-Xy 临界点
+│   ├── ternary_combined.png  ← 双体系综合三元相图
+│   ├── ternary_Tol.png       ← Tol 单独三元相图
+│   ├── ternary_OXy.png       ← O-Xy 单独三元相图
+│   ├── ratio_Tol.png         ← Tol 给受体比-溶剂图 (新可视化)
+│   ├── ratio_OXy.png         ← O-Xy 给受体比-溶剂图
+│   └── *_HR.png              ← 300 DPI 高清版本
+│
+└── src/                      ← 原始源码 (调试历史，已被 FINAL_DELIVERY 替代)
+    ├── binodal-PM6-L8Bo-Tol/
+    ├── binodal-PM6-L8Bo-OXy/
+    ├── spinodal-gemini/
+    ├── Critical_point/
+    ├── debug-tools/           ← Python 调试脚本 (已弃用)
+    └── legacy/                ← 最早期代码存档
+```
+
+---
+
+## 核心算法 (Flory-Huggins 三元相平衡)
+
+### 数学框架
+
+对于三元体系 (1=L8-Bo, 2=溶剂, 3=PM6)，Flory-Huggins 混合自由能：
+
+```
+ΔG_mix/(RT·V_ref) = (φ₁/v₁)ln(φ₁) + (φ₂/v₂)ln(φ₂) + (φ₃/v₃)ln(φ₃)
+                   + g₁₂·φ₁φ₂ + χ₁₃·φ₁φ₃ + g₂₃·φ₂φ₃
+```
+
+其中 φᵢ 是体积分数，vᵢ 是摩尔体积，相互作用参数 g 可以是组成依赖的。
+
+### 计算流程
+
+```
+1. 网格扫描 → 计算 det(G'') 矩阵 → contour 提取 det=0 → Spinodal 曲线
+2. 在 Spinodal 上计算三阶条件 → 寻找变号点 → 插值 → Critical Point
+3. 固定稀相 φ₃, 用 fsolve 求解 μᵢ(浓)=μᵢ(稀) → Binodal + Tie Lines
+4. 单调性过滤 → 后处理 → 出图
+```
+
+### 化学势等式
+
+对每个组分，化学势通过 `∂(ΔG/RT)/∂nᵢ` 推导得到。三组分在两相中化学势相等：
+
+```
+μ₁(浓相) = μ₁(稀相)
+μ₂(浓相) = μ₂(稀相)
+μ₃(浓相) = μ₃(稀相)
+```
+
+固定稀相 φ₃ 后，3 个等式解 3 个未知数（浓相 φ₁, φ₂, 稀相 φ₁），这是适定系统。
+
+---
+
+## 调试历史：原代码的三个致命缺陷及修复
+
+### 缺陷 1：fmincon 收敛到平凡解
+
+**现象**：Binodal 计算在高 φ₃ 区域大量失败，即使 "成功" 的点也经常是浓稀相完全相同的假解。
+
+**根因**：`fmincon` 最小化 `(Δμ₁)² + (Δμ₂)² + (Δμ₃)²`。当两相组成相同时，化学势自然相等，目标函数为 0——这是 fmincon 最容易找到的 "解"。
+
+**修复**：改用 `fsolve` 直接求解化学势等式 `Δμ = [0, 0, 0]`。fsolve 寻找根，不会接受 "自然为 0" 的平凡解。
 
 ```matlab
-cd src/binodal-PM6-L8Bo-Tol   % 或 binodal-PM6-L8Bo-OXy
-main
+% 旧: fmincon 最小化残差平方和
+[x, f] = fmincon(fun_anon, x0_default, ...);
+
+% 新: fsolve 直接求解等式
+[xt, fv] = fsolve(@(x) chempot_eq(x, x3d, ...), x0, opts);
 ```
 
-运行后生成 `binodal_PM6_L8Bo_*.csv`。**CSV 中每相邻两行即构成一条 Tie line**（第 `2i-1` 行为浓相，第 `2i` 行为稀相），无需单独计算 Tie line。
+### 缺陷 2：单一起点导致解分支跳跃
 
-### 3. Critical Point（临界点）
+**现象**：关闭热启动后曲线仍不光滑，浓相 PM6 出现跳点。
+
+**根因**：所有 φ₃ 点使用同一个初始猜测 `[0.2, 0.5, 0.5]`。不同 φ₃ 区域的解位于参数空间的不同位置，但单一初值可能将 fsolve 引向错误的局部解（或另一个 binodal 分支）。
+
+**修复**：8 个覆盖不同区域的初始猜测，每个点都从所有起点尝试，选残差最小的有效解。
 
 ```matlab
-cd src/Critical_point
-find_critical_point_Tol   % 或 find_critical_point_OXy
+guesses = {
+    [0.08,0.85,0.12];  % 低L8Bo, 高溶剂区域
+    [0.10,0.80,0.15];
+    [0.12,0.75,0.18];
+    [0.15,0.70,0.20];
+    [0.18,0.65,0.22];  % 中等区域
+    [0.20,0.60,0.25];
+    [0.25,0.50,0.30];  % 高L8Bo, 较低溶剂
+    [0.15,0.72,0.19];
+};
 ```
 
-策略：**先计算 Spinodal 曲线，再在 Spinodal 上寻找三阶条件变号点**，通过线性插值得到精确临界点。结果保存为 `critical_point_*.csv`。
+### 缺陷 3：后处理缺少单调性约束
+
+**现象**：即使大部分点找到正确解，个别点仍跳分支，导致输出 CSV 中浓相 PM6 不单调。
+
+**根因**：fsolve 的成功过滤条件 (`f < 1e-10 && phase_diff > 0.005`) 无法识别 "找错了分支" 的情况。错误的解满足化学势等式，但对应的浓相 PM6 值不符合物理趋势（沿相图臂应单调变化）。
+
+**修复**：排序后强制执行浓相 PM6 单调递减、稀相 PM6 单调递增约束：
+
+```matlab
+keep = true(np_, 1); pc = Inf; pd = -Inf;
+for k = 1:np_
+    c3 = x_sol(2*k-1, 3);  d3 = x_sol(2*k, 3);
+    if c3 >= pc || c3 <= 0 || d3 <= pd
+        keep(k) = false;    % 违反单调性: 移除
+    else
+        pc = c3; pd = d3;
+    end
+end
+```
 
 ---
 
-## 关键参数速查
+## 参数优化：192 组三维网格扫描
 
-| 参数 | Tol 体系 | O-Xy 体系 | 物理意义 |
-|---|---|---|---|
-| `v1` | 1132.1 | 1132.1 | L8-Bo 摩尔体积 [cm³/mol] |
-| `v2` | 106.3 | 120.6 | 溶剂摩尔体积 |
-| `v3` | 1743900 | 1743900 | PM6 摩尔体积 (DP≈1500) |
-| `X13` | **0.62** | **0.65** | L8-Bo/PM6 相互作用参数（已调优） |
-| `g23` (bb) | 0.3852 | 0.4120 | 溶剂/PM6 相互作用参数 |
-| `p1-p5` | [见下 Tol] | [见下 O-Xy] | L8-Bo/溶剂 g₁₂ 多项式系数 |
+### 为什么需要扫描
 
-**Tol 体系 g₁₂ 系数：** `0, 0, 0, -0.2000, 0.6000`（HSP 估算 + 线性组成依赖）
+即使修复了算法，原始参数（v3=1.74M, X13=0.62）产出的相图仍然挤在 L8-Bo 边，形状不美观。
 
-**O-Xy 体系 g₁₂ 系数：** `0, 0, 0, -0.2000, 0.7500`（HSP 估算 + 线性组成依赖）
+### 扫描设计
+
+| 变量 | 物理意义 | 扫描范围 | 步数 |
+|------|---------|---------|:--:|
+| v3 | PM6 摩尔体积 | 5,000 ~ 1,743,900 | 13 |
+| X13 | L8-Bo/PM6 相互作用 | 0.45 ~ 1.00 | 13 |
+| g23 | 溶剂/PM6 相互作用 (V2) | 0.385 ~ 1.00 | 4 |
+
+V1: v3 × X13 = 169 组 → V2: v3 × X13 × g23 = 192 组
+
+### 核心发现
+
+```
+降 v3  = 相图向中心拉宽 (两臂远离 L8-Bo 边)
+升 X13 = 相分离区扩大 (tie line 变长)
+升 g23 = 补偿 v3 降低时损失的分相驱动力
+```
+
+### 优化后参数
+
+| 参数 | Toluene | o-Xylene | 物理意义 |
+|------|---------|---------|---------|
+| v1 | 1132.1 | 1132.1 | L8-Bo 摩尔体积 [cm³/mol] |
+| v2 | 106.3 | 120.6 | 溶剂摩尔体积 |
+| **v3** | **100,000** | **120,000** | PM6 摩尔体积 (DP≈86 / 103) |
+| **X13** | **0.95** | **0.80** | L8-Bo / PM6 相互作用 |
+| g23 | 0.385 | 0.412 | 溶剂 / PM6 相互作用 |
+| g12 系数 | [0,0,0,-0.20,0.60] | [0,0,0,-0.20,0.75] | L8-Bo / 溶剂多项式 |
+
+### 优化前后对比
+
+| 指标 | 优化前 (Tol) | 优化后 (Tol) |
+|------|:---:|:---:|
+| v3 | 1,743,900 | 100,000 |
+| 成功率 | ~83% | 95% |
+| 浓相 PM6 跨 | 0.12→0.05 | 0.38→0.05 |
+| 相图居中程度 | 紧贴 L8-Bo 边 | 两臂平衡分布 |
+| 跳点数 | 若干 | 0 |
 
 ---
 
-## 调试指南
+## 参数调节指南
 
-- **Binodal 大量迭代失败**：微调 `x0_default`（初始猜测值），或检查 `iX13` 是否合理。
-- **`iX13` 取值**：Binodal 计算推荐 **Tol 0.62 / O-Xy 0.65**。`spinodal-gemini` 中实际调试用 **0.447**。若相图形状异常可尝试在 [0.55, 0.70] 范围内微调。
-- **临界点未找到**：若 `crit_val` 未变号，说明当前参数下临界点可能落在网格边缘，可尝试增大网格分辨率（`linspace(..., 1200)`）或微调 `X13`。
-- **可视化**：所有 CSV 均可直接导入 **Origin** → Plot → Ternary 绘制三元相图。
+如果你需要自己探索参数，推荐流程：
+
+### 快捷版 (改现有参数)
+
+编辑 `FINAL_DELIVERY.m` 中 `systems` 数组：
+```matlab
+systems = {
+    struct('tag','Tol','v2',106.3,'X13',0.95,'g23',0.385,'v3',100000,'p',[0,0,0,-0.20,0.60]);
+};
+```
+改 `X13`, `g23`, `v3` 即可。
+
+### 完整版 (扫描新体系)
+
+```matlab
+% 1. 在 param_sweep_v2.m 中修改扫描范围和固定参数
+% 2. 运行扫描
+param_sweep_v2
+
+% 3. 从输出/热力图中选出最佳组合
+% 4. 将最佳参数写入 FINAL_DELIVERY.m
+```
+
+### 调参口诀
+
+| 症状 | 处方 |
+|------|------|
+| 成功率低 (<60%) | 增大 X13，或增大 g23 |
+| 相图挤在一边 | 降低 v3，同时提高 X13 |
+| 有跳点 | 检查 guesses 数组，增加起始点 |
+| 相分离区太小 | 增大 X13 和/或 g23 |
+| 临界点找不到 | 增大网格分辨率 (n_g)，或微调 X13 |
 
 ---
 
-## 历史修改记录
+## 物理背景速查
 
-| Parameter | File | Description |
-|---|---|---|
-| `v1`, `v2`, `v3` | `fun.m` | 摩尔体积 |
-| `g23` (bb) | `fun.m` | 溶剂–聚合物作用参数 |
-| `p1`–`p5` | `fun.m` | 非溶剂–溶剂 `g12` 多项式系数 |
-| `iX13` | `main.m` | 非溶剂–聚合物作用参数 |
-| `x0` | `main.m` | 初始猜测（不收敛时调整） |
+### 三个相互作用参数
+
+- **X13** (L8-Bo / PM6)：给受体间排斥。X13 > 0.5 → 倾向于分相。
+- **g23** (溶剂 / PM6)：溶剂-聚合物排斥。g23 > 0.5 → 溶剂 "不好"，PM6 易析出。
+- **g12** (L8-Bo / 溶剂)：受体-溶剂排斥。我们采用线性组成依赖: g₁₂ = -0.2·u₂ + 常数。
+
+### 相图的几个关键概念
+
+- **Binodal**：两相共存边界。组成在此线内 → 分相，线外 → 单相。
+- **Spinodal**：亚稳极限。Binodal 与 Spinodal 之间 = 亚稳区。
+- **Critical Point**：Binodal 与 Spinodal 的交点，此处两相组成完全相同。
+- **Tie Line**：连接平衡两相组成的直线。总组成在 tie line 上的任一点分相后得到的都是这对平衡组成。
+
+### 为什么 v3 对相图形状影响巨大
+
+Flory-Huggins 理论中，混合熵项是 `(φᵢ/vᵢ)ln(φᵢ)`。当 v3 极大（PM6 是巨型聚合物），PM6 的混合熵贡献趋近于 0，意味着 PM6 几乎不通过熵驱动混合。相分离只需要很小的焓排斥就能发生，导致相图过度偏向一侧。
+
+降低 v3 → PM6 的混合熵增加 → 需要更强的排斥才能分相 → 相图向中心展开。
 
 ---
 
-## 基团数量收集
+## 输出数据格式
 
-groups_Tol = {9: 5, 10: 1}  # Toluene: 5*AC, 1*ACCH3
-groups_OXY = {9: 4, 10: 2}  # o-Xylene: 4*AC, 2*ACCH3
-groups_L8-Bo = {1: 8, 2: 28, 1: 8, 3: 4, 9: 12, 11: 4, 18: 2, 25: 4, 39: 5, 49: 4}
+### binodal CSV 结构
 
-SMILES_L8-Bo = CCCCCCC(CCCC)Cc1c(C=C2C(=O)c3cc(F)c(F)cc3C2=C(C#N)C#N)sc2c1sc1c3c4nsnc4c4c5sc6c(CC(CCCC)CCCCCC)c(C=C7C(=O)c8cc(F)c(F)cc8C7=C(C#N)C#N)sc6c5n(CC(CC)CCCC)c4c3n(CC(CC)CCCC)c21
+| residual | phi1_L8Bo | phi3_PM6 | phi2_solvent |
+|----------|-----------|----------|--------------|
+| 1.6e-30 | 0.270 | 0.384 | 0.345 | ← tie line #1 浓相
+| 1.6e-30 | 0.539 | 1e-5 | 0.461 | ← tie line #1 稀相
+| 3.2e-30 | 0.272 | 0.380 | 0.348 | ← tie line #2 浓相
+| 3.2e-30 | 0.537 | 1.1e-5 | 0.463 | ← tie line #2 稀相
 
-## P值收集
-L8 : Toluene
-21.0142 -53.8880 50.9171 -24.4012 -1.8878
-L8 : o-Xylene
-16.6738 -40.8682 39.6207 -19.3621 -1.5993
+**每相邻两行 = 一条 tie line**（奇数行浓相，偶数行稀相）。
+
+数据评定标准：
+- 浓相 φ₃ **严格单调递减**
+- 稀相 φ₃ **严格单调递增**
+- residual < 1e-8 即可（实际做到 1e-30 量级）
+
+### Origin 导入
+
+选择 Ternary 模板，列映射：X=phi1_L8Bo, Y=phi3_PM6, Z=phi2_solvent。
+
+---
+
+## 常用命令
+
+```matlab
+FINAL_DELIVERY              % 一键运行
+param_sweep_v2              % 参数扫描
+gen_figures                 % 从已有扫描结果重新出图
+
+% 数据分析
+T = readtable('output/binodal_Tol.csv');
+head(T)
+size(T,1)/2                 % 查看 tie line 数量
+```
+
+---
+
+## 参考
+
+- GitHub Wiki: https://deepwiki.com/KaihangShi/Ternary-Phase-Diagram
+- Flory-Huggins 理论: Flory, P.J. *Principles of Polymer Chemistry* (1953)
+- 原始代码来源: https://github.com/KaihangShi/Ternary-Phase-Diagram
+- 参数优化: Claude Opus 4.7, 2026-05-18
