@@ -25,18 +25,21 @@ FINAL_DELIVERY
 
 ```
 output/
-├── binodal_Tol.csv          ← Tol体系的双节点线数据（可导入Origin画图）
-├── binodal_OXy.csv          ← O-Xy体系的双节点线数据
-├── spinodal_Tol.csv         ← Tol体系的旋节线
-├── spinodal_OXy.csv         ← O-Xy体系的旋节线
-├── critical_Tol.csv         ← Tol体系临界点
-├── critical_OXy.csv         ← O-Xy体系临界点
-├── ternary_combined.png     ← 两个体系对比的三元相图
-├── ternary_Tol.png          ← Tol体系单独三元相图
-├── ternary_OXy.png          ← O-Xy体系单独三元相图
-├── ratio_Tol.png            ← Tol体系 给受体比-溶剂图
-├── ratio_OXy.png            ← O-Xy体系 给受体比-溶剂图
-└── *_HR.png                 ← 以上所有图的高清300dpi版本
+├── data/
+│   ├── binodal_Tol.csv          ← Tol体系的双节点线数据（可导入Origin画图）
+│   ├── binodal_OXy.csv          ← O-Xy体系的双节点线数据
+│   ├── spinodal_Tol.csv         ← Tol体系的旋节线
+│   ├── spinodal_OXy.csv         ← O-Xy体系的旋节线
+│   ├── critical_Tol.csv         ← Tol体系临界点
+│   └── critical_OXy.csv         ← O-Xy体系临界点
+├── figures/
+│   ├── ternary_combined.png     ← 两个体系对比的三元相图
+│   ├── ternary_Tol.png          ← Tol体系单独三元相图
+│   ├── ternary_OXy.png          ← O-Xy体系单独三元相图
+│   ├── ratio_Tol.png            ← Tol体系 给受体比-溶剂图
+│   ├── ratio_OXy.png            ← O-Xy体系 给受体比-溶剂图
+│   └── *_HR.png                 ← 以上所有图的高清300dpi版本
+└── temp/                        ← 扫描结果 .mat 等临时文件
 ```
 
 ---
@@ -45,7 +48,7 @@ output/
 
 ### 2.1 binodal CSV 的结构
 
-打开 `output/binodal_Tol.csv`，你会看到：
+打开 `output/data/binodal_Tol.csv`，你会看到：
 
 | residual | phi1_L8Bo | phi3_PM6 | phi2_Tol |
 |----------|-----------|----------|----------|
@@ -93,7 +96,8 @@ output/
 ### 3.1 FINAL_DELIVERY.m（主脚本，你只需会用这个）
 
 ```matlab
-FINAL_DELIVERY    % 运行
+scripts/main/FOUR_SYSTEM_DELIVERY    % 运行（推荐入口）
+% 或 legacy/FINAL_DELIVERY.m
 ```
 
 做了什么：
@@ -125,7 +129,7 @@ param_sweep_v2    % 运行（约 3-5 分钟）
 ```
 
 输出：
-- `output/param_sweep_v2.mat` — 所有扫描结果
+- `output/temp/param_sweep_v2.mat` — 所有扫描结果
 - 热力图（形状评分 / 成功率分布）
 
 **适用场景**：当你拿到一个新的给受体/溶剂体系，不确定该用什么参数时，用它来系统性地探索。
@@ -265,32 +269,47 @@ gen_figures    % 从 param_sweep_v2.mat 加载结果重新出图
 ```
 Three-phase/
 │
-├── FINAL_DELIVERY.m        ← 【你主要用这个】主脚本
-├── OUTPUT_README.md        ← 输出文件说明
-├── LEARNING_GUIDE.md       ← 本文件
-├── 调试说明.md             ← 早期调试历史（参考用）
+├── scripts/
+│   ├── main/
+│   │   └── FOUR_SYSTEM_DELIVERY.m   ← 【主入口】一键运行所有计算+出图
+│   ├── scan/
+│   │   ├── param_sweep.m           ← V1: v3×X13 扫描
+│   │   ├── param_sweep_v2.m        ← V2: v3×X13×g23 三维扫描
+│   │   ├── find_best_OXy.m         ← O-Xy 最佳参数搜索
+│   │   ├── scan_D18_Tol.m
+│   │   └── scan_D18_OXy.m
+│   ├── legacy/
+│   │   ├── FINAL_DELIVERY.m        ← 旧版交付脚本
+│   │   └── gen_figures.m           ← 从扫描结果出图
+│   └── debug/
+│       └── test_D18_OXy.m          ← D18 参数稳定性测试
 │
-├── param_sweep.m           ← V1: v3×X13 扫描
-├── param_sweep_v2.m        ← V2: v3×X13×g23 三维扫描
-├── find_best_OXy.m         ← O-Xy 最佳参数搜索
-├── gen_figures.m           ← 从扫描结果出图
+├── docs/
+│   ├── OUTPUT_README.md            ← 输出文件说明
+│   ├── LEARNING_GUIDE.md           ← 本文件
+│   ├── README.md
+│   └── 调试说明.md                  ← 早期调试历史（参考用）
 │
-├── output/                 ← 所有生成的文件
-│   ├── binodal_*.csv       ← 双节点线数据
-│   ├── spinodal_*.csv      ← 旋节线数据
-│   ├── critical_*.csv      ← 临界点数据
-│   ├── ternary_*.png       ← 三元相图
-│   ├── ratio_*.png         ← Ratio-Solvent 相图
-│   └── *_HR.png            ← 高清版
+├── output/
+│   ├── data/                       ← CSV 数据文件
+│   │   ├── binodal_*.csv           ← 双节点线数据
+│   │   ├── spinodal_*.csv          ← 旋节线数据
+│   │   └── critical_*.csv          ← 临界点数据
+│   ├── figures/                    ← PNG 图片输出
+│   │   ├── ternary_*.png           ← 三元相图
+│   │   ├── ratio_*.png             ← Ratio-Solvent 相图
+│   │   └── *_HR.png                ← 高清版
+│   └── temp/                       ← MAT 扫描结果等临时文件
 │
-├── src/                    ← 原始源码（调试历史）
+├── src/                            ← 原始源码与工具
 │   ├── binodal-PM6-L8Bo-Tol/
 │   ├── binodal-PM6-L8Bo-OXy/
 │   ├── spinodal-gemini/
 │   ├── Critical_point/
 │   └── debug-tools/
 │
-└── run_all.m               ← 旧版入口（已弃用）
+├── reports/                        ← 物理解读报告
+└── reference/                      ← 参考文献
 ```
 
 ---
@@ -331,7 +350,7 @@ param_sweep_v2              % 三维扫描找最佳参数
 gen_figures                 % 从扫描结果重新出图
 
 % 数据查看
-T = readtable('output/binodal_Tol.csv');  % 读取数据
+T = readtable('output/data/binodal_Tol.csv');  % 读取数据
 head(T)                                  % 看前几行
 size(T,1)/2                              % 查看有多少对 tie line
 ```

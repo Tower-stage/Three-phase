@@ -1,6 +1,16 @@
 %% 为 O-Xy 体系找到最优参数 (基于 Tol best_case1 等效)
 clear; clc;
 
+% 自动定位项目根目录
+scriptDir = fileparts(mfilename('fullpath'));
+projectDir = fileparts(scriptDir);
+dataDir = fullfile(projectDir, 'output', 'data');
+figDir = fullfile(projectDir, 'output', 'figures');
+tempDir = fullfile(projectDir, 'output', 'temp');
+if ~exist(dataDir, 'dir'), mkdir(dataDir); end
+if ~exist(figDir, 'dir'), mkdir(figDir); end
+if ~exist(tempDir, 'dir'), mkdir(tempDir); end
+
 v1 = 1132.1; v2 = 120.6;
 p = [0, 0, 0, -0.2000, 0.7500];
 
@@ -179,7 +189,7 @@ for k = 1:min(15, sum(all_s>0))
 end
 
 %% ===== 保存 =====
-save('output/best_OXy_search.mat', 'results_ox', 'score_ox', 'succ_ox', 'cp_ox', ...
+save(fullfile(tempDir, 'best_OXy_search.mat'), 'results_ox', 'score_ox', 'succ_ox', 'cp_ox', ...
     'v3_values', 'X13_values', 'g23_values');
 fprintf('\nO-Xy搜索完成，结果已保存\n');
 

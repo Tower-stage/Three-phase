@@ -10,10 +10,12 @@
 
 ```matlab
 cd d:\Deskkk\First CC\Three-phase
-FINAL_DELIVERY
+addpath(genpath('scripts'))
+FOUR_SYSTEM_DELIVERY   % 主入口（推荐）
+% 或 FINAL_DELIVERY    % 旧版入口
 ```
 
-等 2-3 分钟，所有计算和图表自动生成到 `output/`。
+等 2-3 分钟，所有计算和图表自动生成到 `output/data/` 和 `output/figures/`。
 
 ---
 
@@ -22,38 +24,49 @@ FINAL_DELIVERY
 ```
 Three-phase/
 │
-├── FINAL_DELIVERY.m          ← 【主入口】一键运行所有计算+出图
-├── param_sweep.m             ← V1: v3×X13 二维参数扫描 (169组)
-├── param_sweep_v2.m          ← V2: v3×X13×g23 三维参数扫描 (192组)
-├── find_best_OXy.m           ← O-Xy 体系最佳参数搜索 (60组)
-├── gen_figures.m             ← 从扫描结果 .mat 文件重新出图
+├── scripts/
+│   ├── main/
+│   │   └── FOUR_SYSTEM_DELIVERY.m  ← 【主入口】一键运行所有计算+出图
+│   ├── scan/
+│   │   ├── param_sweep.m           ← V1: v3×X13 二维参数扫描 (169组)
+│   │   ├── param_sweep_v2.m        ← V2: v3×X13×g23 三维参数扫描 (192组)
+│   │   ├── find_best_OXy.m         ← O-Xy 体系最佳参数搜索 (60组)
+│   │   ├── scan_D18_Tol.m
+│   │   └── scan_D18_OXy.m
+│   ├── legacy/
+│   │   ├── FINAL_DELIVERY.m        ← 旧版交付脚本
+│   │   ├── FINAL_deliver.m
+│   │   └── gen_figures.m           ← 从扫描结果 .mat 文件重新出图
+│   └── debug/
+│       └── test_D18_OXy.m          ← D18 参数稳定性测试
 │
-├── README.md                 ← 本文件 (技术文档)
-├── LEARNING_GUIDE.md         ← 学习手册 (如何改参数、排查问题)
-├── OUTPUT_README.md          ← 输出文件说明
-├── 调试说明.md               ← 早期调试历史 (Python 时期)
+├── docs/
+│   ├── README.md                   ← 本文件 (技术文档)
+│   ├── LEARNING_GUIDE.md           ← 学习手册
+│   ├── OUTPUT_README.md            ← 输出文件说明
+│   └── 调试说明.md                  ← 早期调试历史
 │
-├── output/                   ← 全部输出
-│   ├── binodal_Tol.csv       ← Tol 双节点线 (每相邻两行=一条 tie line)
-│   ├── binodal_OXy.csv       ← O-Xy 双节点线
-│   ├── spinodal_Tol.csv      ← Tol 旋节线
-│   ├── spinodal_OXy.csv      ← O-Xy 旋节线
-│   ├── critical_Tol.csv      ← Tol 临界点
-│   ├── critical_OXy.csv      ← O-Xy 临界点
-│   ├── ternary_combined.png  ← 双体系综合三元相图
-│   ├── ternary_Tol.png       ← Tol 单独三元相图
-│   ├── ternary_OXy.png       ← O-Xy 单独三元相图
-│   ├── ratio_Tol.png         ← Tol 给受体比-溶剂图 (新可视化)
-│   ├── ratio_OXy.png         ← O-Xy 给受体比-溶剂图
-│   └── *_HR.png              ← 300 DPI 高清版本
+├── output/
+│   ├── data/                       ← CSV 数据文件
+│   │   ├── binodal_*.csv
+│   │   ├── spinodal_*.csv
+│   │   └── critical_*.csv
+│   ├── figures/                    ← PNG 图片输出
+│   │   ├── ternary_*.png
+│   │   ├── ratio_*.png
+│   │   └── *_HR.png
+│   └── temp/                       ← MAT 扫描结果等临时文件
 │
-└── src/                      ← 原始源码 (调试历史，已被 FINAL_DELIVERY 替代)
-    ├── binodal-PM6-L8Bo-Tol/
-    ├── binodal-PM6-L8Bo-OXy/
-    ├── spinodal-gemini/
-    ├── Critical_point/
-    ├── debug-tools/           ← Python 调试脚本 (已弃用)
-    └── legacy/                ← 最早期代码存档
+├── src/                            ← 原始源码与工具
+│   ├── binodal-PM6-L8Bo-Tol/
+│   ├── binodal-PM6-L8Bo-OXy/
+│   ├── spinodal-gemini/
+│   ├── Critical_point/
+│   ├── debug-tools/
+│   └── legacy/
+│
+├── reports/                        ← 物理解读报告
+└── reference/                      ← 参考文献
 ```
 
 ---
@@ -294,7 +307,7 @@ param_sweep_v2              % 参数扫描
 gen_figures                 % 从已有扫描结果重新出图
 
 % 数据分析
-T = readtable('output/binodal_Tol.csv');
+T = readtable('output/data/binodal_Tol.csv');
 head(T)
 size(T,1)/2                 % 查看 tie line 数量
 ```

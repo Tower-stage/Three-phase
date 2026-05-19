@@ -5,6 +5,16 @@
 %% ============================================================
 clear; clc;
 
+% 自动定位项目根目录
+scriptDir = fileparts(mfilename('fullpath'));
+projectDir = fileparts(scriptDir);
+dataDir = fullfile(projectDir, 'output', 'data');
+figDir = fullfile(projectDir, 'output', 'figures');
+tempDir = fullfile(projectDir, 'output', 'temp');
+if ~exist(dataDir, 'dir'), mkdir(dataDir); end
+if ~exist(figDir, 'dir'), mkdir(figDir); end
+if ~exist(tempDir, 'dir'), mkdir(tempDir); end
+
 %% ===== 固定参数 (Tol体系) =====
 v1 = 1132.1;      % L8-Bo 摩尔体积
 v2 = 106.3;       % Toluene 摩尔体积
@@ -256,8 +266,8 @@ data.x3c_range = x3c_range;
 data.phi2_range = phi2_range;
 data.tie_len = tie_len;
 data.x3_crit_v = x3_crit_v;
-save('output/param_sweep_results.mat', 'data', 'results', '-v7.3');
-fprintf('扫描结果已保存至 output/param_sweep_results.mat\n');
+save(fullfile(tempDir, 'param_sweep_results.mat'), 'data', 'results', '-v7.3');
+fprintf('扫描结果已保存至 %s\n', fullfile(tempDir, 'param_sweep_results.mat'));
 
 %% ===== 热力图: 形状评分 =====
 figure('Position', [100, 100, 1000, 400]);
@@ -295,8 +305,8 @@ xlabel('X_{13}');
 ylabel('log_{10}(v_3)');
 title('Critical Point \phi_3 (PM6)');
 
-saveas(gcf, 'output/param_sweep_heatmaps.png');
-exportgraphics(gcf, 'output/param_sweep_heatmaps_HR.png', 'Resolution', 300);
+saveas(gcf, fullfile(figDir, 'param_sweep_heatmaps.png'));
+exportgraphics(gcf, fullfile(figDir, 'param_sweep_heatmaps_HR.png'), 'Resolution', 300);
 fprintf('热力图已保存\n');
 
 %% ===== 找出最佳参数组合 =====
@@ -363,8 +373,8 @@ for bi = 1:n_best
     axis equal off;
     title(sprintf('v3=%.0f, X13=%.2f (score=%.3f)', res.v3, res.X13, shape_score(iv,ix)), 'FontSize', 9);
 end
-saveas(gcf, 'output/param_sweep_best_ternary.png');
-exportgraphics(gcf, 'output/param_sweep_best_ternary_HR.png', 'Resolution', 300);
+saveas(gcf, fullfile(figDir, 'param_sweep_best_ternary.png'));
+exportgraphics(gcf, fullfile(figDir, 'param_sweep_best_ternary_HR.png'), 'Resolution', 300);
 fprintf('最佳相图面板已保存\n');
 
 %% ===== 新可视化: 给受体比 vs 溶剂百分比 =====
@@ -414,8 +424,8 @@ for bi = 1:n_best
     legend({'Conc. arm', 'Dilute arm', 'Tie lines', 'CP'}, 'Location', 'best', 'FontSize', 6);
     grid on;
 end
-saveas(gcf, 'output/param_sweep_ratio_vs_solvent.png');
-exportgraphics(gcf, 'output/param_sweep_ratio_vs_solvent_HR.png', 'Resolution', 300);
+saveas(gcf, fullfile(figDir, 'param_sweep_ratio_vs_solvent.png'));
+exportgraphics(gcf, fullfile(figDir, 'param_sweep_ratio_vs_solvent_HR.png'), 'Resolution', 300);
 fprintf('Ratio vs Solvent 图已保存\n');
 
 %% ===== 针对性分析: 最佳参数组合的详细相图 =====

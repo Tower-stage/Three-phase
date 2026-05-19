@@ -6,6 +6,17 @@
 %% 特点: 平滑曲线、无跳点、物理解合理
 %% ============================================================
 clear; clc;
+
+% 自动定位项目根目录
+scriptDir = fileparts(mfilename('fullpath'));
+projectDir = fileparts(scriptDir);
+dataDir = fullfile(projectDir, 'output', 'data');
+figDir = fullfile(projectDir, 'output', 'figures');
+tempDir = fullfile(projectDir, 'output', 'temp');
+if ~exist(dataDir, 'dir'), mkdir(dataDir); end
+if ~exist(figDir, 'dir'), mkdir(figDir); end
+if ~exist(tempDir, 'dir'), mkdir(tempDir); end
+
 addpath(genpath('src'));
 
 %% ===== 配置: 选择要运行的体系 =====
@@ -218,12 +229,12 @@ for sys_idx = 1:2
 
     % 保存
     T = array2table(x_sol, 'VariableNames', {'residual','phi1_L8Bo','phi3_PM6',['phi2_', prm.name(1:3)]});
-    writetable(T, ['output/binodal_', sys, '.csv']);
+    writetable(T, fullfile(dataDir, ['binodal_', sys, '.csv']));
     fprintf('  Binodal: %d/%d 对成功 (%.0f%%)\n', succ, n_loop, succ/n_loop*100);
 
     % 保存临界点
     writetable(table(x1_crit,x2_crit,x3_crit, 'VariableNames', {'phi1','phi2','phi3'}), ...
-        ['output/critical_', sys, '.csv']);
+        fullfile(dataDir, ['critical_', sys, '.csv']));
 
     % 保存旋节线
     spin_all = [];
@@ -233,7 +244,7 @@ for sys_idx = 1:2
         spin_all = [spin_all; zeros(sum(vld),1), s1(vld), s3(vld), s2(vld)];
     end
     writetable(array2table(spin_all, 'VariableNames', {'residual','phi1','phi3','phi2'}), ...
-        ['output/spinodal_', sys, '.csv']);
+        fullfile(dataDir, ['spinodal_', sys, '.csv']));
 
     % 存储结果
     results{sys_idx} = struct('spinodal', {spin_segs}, 'x_sol', x_sol, ...
@@ -340,9 +351,9 @@ annotation('textbox', [0.15, 0.75, 0.25, 0.15], 'String', ...
     'FontSize', 8, 'BackgroundColor', 'w', 'EdgeColor', [0.5 0.5 0.5]);
 
 % 导出
-saveas(gcf, 'output/FINAL_ternary_phase_diagram.png');
-exportgraphics(gcf, 'output/FINAL_ternary_phase_diagram_HR.png', 'Resolution', 300);
-fprintf('  综合相图已保存: output/FINAL_ternary_phase_diagram.png\n');
+saveas(gcf, fullfile(figDir, 'FINAL_ternary_phase_diagram.png'));
+exportgraphics(gcf, fullfile(figDir, 'FINAL_ternary_phase_diagram_HR.png'), 'Resolution', 300);
+fprintf('  综合相图已保存: %s\n', fullfile(figDir, 'FINAL_ternary_phase_diagram.png'));
 
 %% ===== 单独出图: Tol 体系 =====
 plot_single_system(results{1}, 'Tol', 'Toluene', [0 0 1]);
@@ -444,7 +455,7 @@ function plot_single_system(res, tag, solvent_name, clr)
     title(['PM6 / L8-Bo / ' solvent_name ' 三元相图'], 'FontSize', 14, 'FontWeight', 'bold');
     legend({'Spinodal', 'Binodal', 'Tie lines', 'Critical Point'}, 'Location', 'southwest');
 
-    saveas(gcf, ['output/phase_' tag '.png']);
-    exportgraphics(gcf, ['output/phase_' tag '_HR.png'], 'Resolution', 300);
+    saveas(gcf, fullfile(figDir, ['phase_' tag '.png']));
+    exportgraphics(gcf, fullfile(figDir, ['phase_' tag '_HR.png']), 'Resolution', 300);
     fprintf('  单独相图已保存: output/phase_%s.png\n', tag);
 end

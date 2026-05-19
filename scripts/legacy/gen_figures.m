@@ -1,6 +1,17 @@
 %% 从保存的扫描结果生成最终图表
 clear; clc;
-load('output/param_sweep_v2.mat');
+
+% 自动定位项目根目录
+scriptDir = fileparts(mfilename('fullpath'));
+projectDir = fileparts(scriptDir);
+dataDir = fullfile(projectDir, 'output', 'data');
+figDir = fullfile(projectDir, 'output', 'figures');
+tempDir = fullfile(projectDir, 'output', 'temp');
+if ~exist(dataDir, 'dir'), mkdir(dataDir); end
+if ~exist(figDir, 'dir'), mkdir(figDir); end
+if ~exist(tempDir, 'dir'), mkdir(tempDir); end
+
+load(fullfile(tempDir, 'param_sweep_v2.mat'));
 
 v3_values = data2.v3_values;
 X13_values = data2.X13_values;
@@ -55,8 +66,8 @@ for ig = 1:ng
         end
     end
 end
-saveas(gcf, 'output/heatmap_g23_effect.png');
-exportgraphics(gcf, 'output/heatmap_g23_effect_HR.png', 'Resolution', 300);
+saveas(gcf, fullfile(figDir, 'heatmap_g23_effect.png'));
+exportgraphics(gcf, fullfile(figDir, 'heatmap_g23_effect_HR.png'), 'Resolution', 300);
 fprintf('g23效应热力图已保存\n');
 
 %% ===== 挑选代表性组合生成相图 =====
@@ -156,7 +167,7 @@ for ci = 1:length(cases)
     axis equal off;
     title(sprintf('Ternary: v3=%.0f  X13=%.2f  g23=%.3f', v3o, X13o, g23o));
     legend({'Spinodal','Binodal','Tie lines','CP'}, 'Location', 'southwest');
-    saveas(gcf, sprintf('output/best_case%d_ternary.png', ci));
+    saveas(gcf, fullfile(figDir, sprintf('best_case%d_ternary.png', ci)));
 
     % --- 子图2: Ratio-Solvent 二维图 ---
     figure('Position', [350+ci*300, 50, 600, 550]);
@@ -186,7 +197,7 @@ for ci = 1:length(cases)
     legend({'Two-phase region', 'Conc. arm (PM6-rich)', 'Dilute arm (L8Bo-rich)', 'Tie lines', 'CP'}, ...
         'Location', 'best');
     grid on;
-    saveas(gcf, sprintf('output/best_case%d_ratio.png', ci));
+    saveas(gcf, fullfile(figDir, sprintf('best_case%d_ratio.png', ci)));
 end
 
 fprintf('各案例相图已保存\n');
@@ -260,8 +271,8 @@ str = sprintf(['PM6 DP ≈ %.0f\n', ...
 annotation('textbox', dim, 'String', str, 'FontSize', 9, ...
     'BackgroundColor', 'w', 'EdgeColor', [0.4 0.4 0.4]);
 
-saveas(gcf, 'output/FINAL_ratio_solvent_diagram.png');
-exportgraphics(gcf, 'output/FINAL_ratio_solvent_diagram_HR.png', 'Resolution', 300);
+saveas(gcf, fullfile(figDir, 'FINAL_ratio_solvent_diagram.png'));
+exportgraphics(gcf, fullfile(figDir, 'FINAL_ratio_solvent_diagram_HR.png'), 'Resolution', 300);
 fprintf('最终 Ratio-Solvent 图已保存\n');
 
 %% ===== 参数调节指南总结 =====

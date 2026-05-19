@@ -1,6 +1,16 @@
 %% D18-OXy 参数稳定性测试
 clear; clc;
 
+% 自动定位项目根目录
+scriptDir = fileparts(mfilename('fullpath'));
+projectDir = fileparts(scriptDir);
+dataDir = fullfile(projectDir, 'output', 'data');
+figDir = fullfile(projectDir, 'output', 'figures');
+tempDir = fullfile(projectDir, 'output', 'temp');
+if ~exist(dataDir, 'dir'), mkdir(dataDir); end
+if ~exist(figDir, 'dir'), mkdir(figDir); end
+if ~exist(tempDir, 'dir'), mkdir(tempDir); end
+
 v1 = 1132.1; v2 = 120.6; p = [0,0,0,-0.20,0.75];
 
 candidates = {
@@ -16,8 +26,6 @@ opts = optimoptions('fsolve', 'Display', 'off', 'MaxIterations', 5000, ...
 guesses = {[0.08,0.85,0.12]; [0.10,0.80,0.15]; [0.12,0.75,0.18]; ...
            [0.15,0.70,0.20]; [0.18,0.65,0.22]; [0.20,0.60,0.25]; ...
            [0.25,0.50,0.30]; [0.15,0.72,0.19]};
-
-if ~exist('output','dir'), mkdir('output'); end
 
 for cid = 1:length(candidates)
     cand = candidates{cid};
@@ -144,7 +152,7 @@ for cid = 1:length(candidates)
 
     % Save
     writetable(array2table(x_sol, 'VariableNames', {'residual','phi1','phi3','phi2'}), ...
-        sprintf('output/test_D18_OXy_%s.csv', cand.tag));
+        fullfile(dataDir, sprintf('test_D18_OXy_%s.csv', cand.tag)));
 end
 
 function F = chempot_eq(x, x3d, v1, v2, v3, s, r, X13, g23, p)

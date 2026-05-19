@@ -8,6 +8,15 @@
 %% ============================================================
 clear; clc;
 
+% 自动定位项目根目录
+scriptDir = fileparts(mfilename('fullpath'));
+projectDir = fileparts(scriptDir);
+dataDir = fullfile(projectDir, 'output', 'data');
+figDir = fullfile(projectDir, 'output', 'figures');
+tempDir = fullfile(projectDir, 'output', 'temp');
+if ~exist(dataDir, 'dir'), mkdir(dataDir); end
+if ~exist(figDir, 'dir'), mkdir(figDir); end
+if ~exist(tempDir, 'dir'), mkdir(tempDir); end
 if ~exist('output','dir'), mkdir('output'); end
 
 %% ===== 体系配置 =====
@@ -188,12 +197,12 @@ for sid = 1:2
     % === 保存CSV ===
     cols = {'residual','phi1_L8Bo','phi3_PM6',['phi2_',sys.tag]};
     T = array2table(x_sol, 'VariableNames', cols);
-    writetable(T, ['output/binodal_',sys.tag,'.csv']);
+    writetable(T, fullfile(dataDir, ['binodal_',sys.tag,'.csv']));
     fprintf('  Saved: output/binodal_%s.csv\n', sys.tag);
 
     % === 保存临界点 ===
     writetable(table(x1_crit,x2_crit,x3_crit,'VariableNames',{'phi1','phi2','phi3'}), ...
-        ['output/critical_',sys.tag,'.csv']);
+        fullfile(dataDir, ['critical_',sys.tag,'.csv']));
     fprintf('  Saved: output/critical_%s.csv\n', sys.tag);
 
     % === 保存旋节线 ===
@@ -204,7 +213,7 @@ for sid = 1:2
         spin_all = [spin_all; zeros(sum(v),1), s1(v), s3(v), s2(v)];
     end
     writetable(array2table(spin_all,'VariableNames',{'residual','phi1','phi3','phi2'}), ...
-        ['output/spinodal_',sys.tag,'.csv']);
+        fullfile(dataDir, ['spinodal_',sys.tag,'.csv']));
     fprintf('  Saved: output/spinodal_%s.csv (%d pts)\n', sys.tag, size(spin_all,1));
 
     all_res{sid} = struct('spin_segs',{spin_segs}, 'x_sol',x_sol, ...
@@ -281,8 +290,8 @@ annotation('textbox',[0.15,0.72,0.3,0.18],'String',{...
     '','Flory-Huggins theory','PM6 DP ≈ 86~103'},...
     'FontSize',8,'BackgroundColor','w','EdgeColor',[0.5 0.5 0.5]);
 
-saveas(gcf, 'output/ternary_combined.png');
-exportgraphics(gcf, 'output/ternary_combined_HR.png', 'Resolution', 300);
+saveas(gcf, fullfile(figDir, 'ternary_combined.png'));
+exportgraphics(gcf, fullfile(figDir, 'ternary_combined_HR.png'), 'Resolution', 300);
 fprintf('  Saved: ternary_combined.png\n');
 
 %% ---- 图2&3: 单独体系 Ratio-Solvent 图 ----
@@ -340,8 +349,8 @@ for sid = 1:2
     annotation('textbox', dim, 'String', str, 'FontSize', 9, ...
         'BackgroundColor', 'w', 'EdgeColor', [0.4 0.4 0.4]);
 
-    saveas(gcf, sprintf('output/ratio_%s.png', res.tag));
-    exportgraphics(gcf, sprintf('output/ratio_%s_HR.png', res.tag), 'Resolution', 300);
+    saveas(gcf, sprintf(fullfile(figDir, 'ratio_%s.png'), res.tag));
+    exportgraphics(gcf, fullfile(figDir, sprintf('ratio_%s_HR.png', res.tag)), 'Resolution', 300);
     fprintf('  Saved: ratio_%s.png\n', res.tag);
 end
 
@@ -386,8 +395,8 @@ for sid = 1:2
     title(sprintf('%s: Ternary Phase Diagram', res.name), 'FontSize',12, 'FontWeight','bold');
     legend({'Spinodal','Binodal','Tie lines','CP'},'Location','southwest');
 
-    saveas(gcf, sprintf('output/ternary_%s.png', res.tag));
-    exportgraphics(gcf, sprintf('output/ternary_%s_HR.png', res.tag), 'Resolution', 300);
+    saveas(gcf, fullfile(figDir, sprintf('ternary_%s.png', res.tag)));
+    exportgraphics(gcf, fullfile(figDir, sprintf('ternary_%s_HR.png', res.tag)), 'Resolution', 300);
     fprintf('  Saved: ternary_%s.png\n', res.tag);
 end
 
@@ -395,7 +404,7 @@ end
 fprintf('\n%s\n', repmat('=',1,60));
 fprintf('  DELIVERY COMPLETE\n');
 fprintf('%s\n', repmat('=',1,60));
-fprintf('\nOutput files in output/:\n');
+fprintf('\nOutput files in %s/:\n', fullfile(projectDir, 'output'));
 fprintf('  binodal_Tol.csv / binodal_OXy.csv       — Binodal (tie line pairs)\n');
 fprintf('  spinodal_Tol.csv / spinodal_OXy.csv     — Spinodal curves\n');
 fprintf('  critical_Tol.csv / critical_OXy.csv     — Critical points\n');

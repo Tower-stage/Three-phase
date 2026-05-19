@@ -3,6 +3,16 @@
 %% ============================================================
 clear; clc;
 
+% 自动定位项目根目录
+scriptDir = fileparts(mfilename('fullpath'));
+projectDir = fileparts(scriptDir);
+dataDir = fullfile(projectDir, 'output', 'data');
+figDir = fullfile(projectDir, 'output', 'figures');
+tempDir = fullfile(projectDir, 'output', 'temp');
+if ~exist(dataDir, 'dir'), mkdir(dataDir); end
+if ~exist(figDir, 'dir'), mkdir(figDir); end
+if ~exist(tempDir, 'dir'), mkdir(tempDir); end
+
 v1 = 1132.1;
 v2 = 120.6;       % o-Xylene
 p  = [0, 0, 0, -0.2000, 0.7500];
@@ -170,7 +180,7 @@ for k=1:min(10,length(sidx))
 end
 
 % 保存
-save('output/scan_D18_OXy.mat','v3_values','X13_values','g23_values','succ_rate','shape_score','all_res');
+save(fullfile(tempDir, 'scan_D18_OXy.mat'), 'v3_values','X13_values','g23_values','succ_rate','shape_score','all_res');
 
 function F=chempot_D18_OXy(x,x3d,v1,v2,v3,s,r,X13,g23,p)
     x1c=max(x(1),1e-10);x2c=max(x(2),1e-10);x3c=max(1-x1c-x2c,1e-10);

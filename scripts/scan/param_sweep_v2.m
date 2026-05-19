@@ -5,6 +5,16 @@
 %% ============================================================
 clear; clc;
 
+% 自动定位项目根目录
+scriptDir = fileparts(mfilename('fullpath'));
+projectDir = fileparts(scriptDir);
+dataDir = fullfile(projectDir, 'output', 'data');
+figDir = fullfile(projectDir, 'output', 'figures');
+tempDir = fullfile(projectDir, 'output', 'temp');
+if ~exist(dataDir, 'dir'), mkdir(dataDir); end
+if ~exist(figDir, 'dir'), mkdir(figDir); end
+if ~exist(tempDir, 'dir'), mkdir(tempDir); end
+
 %% ===== 固定参数 =====
 v1 = 1132.1;
 v2 = 106.3;       % Toluene
@@ -221,8 +231,8 @@ data2.g23_values=g23_values; data2.succ_rate=succ_rate;
 data2.shape_score=shape_score; data2.x3_crit_v=x3_crit_v;
 data2.x3c_range=x3c_range; data2.phi2_range=phi2_range;
 data2.tie_len_v=tie_len_v;
-save('output/param_sweep_v2.mat','data2','all_results','-v7.3');
-fprintf('结果已保存至 output/param_sweep_v2.mat\n');
+save(fullfile(tempDir, 'param_sweep_v2.mat'),'data2','all_results','-v7.3');
+fprintf('结果已保存至 %s\n', fullfile(tempDir, 'param_sweep_v2.mat'));
 
 %% ===== 找出最佳组合 =====
 fprintf('\n===== TOP 20 参数组合 (按形状评分) =====\n');
@@ -354,7 +364,7 @@ for ci=1:length(candidates)
     axis equal off;
     title(sprintf('Ternary: v3=%.0f X13=%.2f g23=%.3f',v3o,X13o,g23o),'FontSize',12);
     legend({'Spinodal','Binodal','Tie lines','CP'},'Location','southwest');
-    saveas(gcf,sprintf('output/ternary_v3%.0f_X13%.2f_g23%.3f.png',v3o,X13o,g23o));
+    saveas(gcf, fullfile(figDir, sprintf('ternary_v3%.0f_X13%.2f_g23%.3f.png',v3o,X13o,g23o)));
 
     % ===== 图B: 给受体比 vs 溶剂% (新型可视化) =====
     figure('Position',[ci*250+325,50,650,600]);
@@ -394,7 +404,7 @@ for ci=1:length(candidates)
     xlim([0 1]); ylim([0 1]);
     legend('Location','best');
     grid on;
-    saveas(gcf,sprintf('output/ratio_v3%.0f_X13%.2f_g23%.3f.png',v3o,X13o,g23o));
+    saveas(gcf, fullfile(figDir, sprintf('ratio_v3%.0f_X13%.2f_g23%.3f.png',v3o,X13o,g23o)));
 end
 
 %% ===== 参数规律总结图: g23效应 =====
@@ -435,12 +445,12 @@ for ig=1:ng
     title(sprintf('g_{23}=%.3f (v3=20000, X13=0.75)',g23_values(ig)));
     grid on;
 end
-saveas(gcf,'output/g23_effect_comparison.png');
-exportgraphics(gcf,'output/g23_effect_comparison_HR.png','Resolution',300);
+saveas(gcf, fullfile(figDir, 'g23_effect_comparison.png'));
+exportgraphics(gcf, fullfile(figDir, 'g23_effect_comparison_HR.png'),'Resolution',300);
 fprintf('g23 效应对比图已保存\n');
 
 fprintf('\n===== 全部参数扫描完成 =====\n');
-fprintf('输出文件位于 output/ 目录\n');
+fprintf('输出文件位于 %s 目录\n', fullfile(projectDir, 'output'));
 
 %% ===== 化学势函数 =====
 function F=chempot_v2(x,x3d,v1,v2,v3,s,r,X13,g23,p)

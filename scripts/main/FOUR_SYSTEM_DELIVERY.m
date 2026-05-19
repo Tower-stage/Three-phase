@@ -7,7 +7,13 @@
 %% ============================================================
 clear; clc;
 
-if ~exist('output','dir'), mkdir('output'); end
+%% 自动定位项目根目录（脚本位于 scripts/main/）
+scriptDir = fileparts(mfilename('fullpath'));
+projectDir = fileparts(scriptDir);
+dataDir = fullfile(projectDir, 'output', 'data');
+figDir = fullfile(projectDir, 'output', 'figures');
+if ~exist(dataDir, 'dir'), mkdir(dataDir); end
+if ~exist(figDir, 'dir'), mkdir(figDir); end
 
 %% ===== 四种体系配置 =====
 % 固定参数
@@ -185,12 +191,12 @@ for sid = 1:4
     % === 保存CSV ===
     cols = {'residual','phi1_L8Bo','phi3_Donor',['phi2_',sys.solvent]};
     T = array2table(x_sol, 'VariableNames', cols);
-    writetable(T, ['output/binodal_',sys.tag,'.csv']);
-    fprintf('  Saved: output/binodal_%s.csv\n', sys.tag);
+    writetable(T, fullfile(dataDir, ['binodal_',sys.tag,'.csv']));
+    fprintf('  Saved: output/data/binodal_%s.csv\n', sys.tag);
 
     writetable(table(x1_crit,x2_crit,x3_crit,'VariableNames',{'phi1','phi2','phi3'}), ...
-        ['output/critical_',sys.tag,'.csv']);
-    fprintf('  Saved: output/critical_%s.csv\n', sys.tag);
+        fullfile(dataDir, ['critical_',sys.tag,'.csv']));
+    fprintf('  Saved: output/data/critical_%s.csv\n', sys.tag);
 
     spin_all = [];
     for sg = 1:length(spin_segs)
@@ -199,8 +205,8 @@ for sid = 1:4
         spin_all = [spin_all; zeros(sum(v),1), s1(v), s3(v), s2(v)];
     end
     writetable(array2table(spin_all,'VariableNames',{'residual','phi1','phi3','phi2'}), ...
-        ['output/spinodal_',sys.tag,'.csv']);
-    fprintf('  Saved: output/spinodal_%s.csv (%d pts)\n', sys.tag, size(spin_all,1));
+        fullfile(dataDir, ['spinodal_',sys.tag,'.csv']));
+    fprintf('  Saved: output/data/spinodal_%s.csv (%d pts)\n', sys.tag, size(spin_all,1));
 
     all_res{sid} = struct('spin_segs',{spin_segs}, 'x_sol',x_sol, ...
         'x1_crit',x1_crit, 'x3_crit',x3_crit, ...
@@ -273,8 +279,8 @@ annotation('textbox',[0.15,0.70,0.32,0.22],'String',{...
     '','Flory-Huggins theory','Optimized via 3D grid sweep'},...
     'FontSize',8,'BackgroundColor','w','EdgeColor',[0.5 0.5 0.5]);
 
-saveas(gcf, 'output/ternary_four_systems.png');
-exportgraphics(gcf, 'output/ternary_four_systems_HR.png', 'Resolution', 300);
+saveas(gcf, fullfile(figDir, 'ternary_four_systems.png'));
+exportgraphics(gcf, fullfile(figDir, 'ternary_four_systems_HR.png'), 'Resolution', 300);
 fprintf('  Saved: ternary_four_systems.png\n');
 
 %% ---- 图2: 分面对比 (2x2 子图) ----
@@ -322,8 +328,8 @@ for sid = 1:4
     legend({'Spinodal','Binodal','Tie lines','CP'},'Location','southwest','FontSize',7);
 end
 sgtitle('Four-System Ternary Phase Diagrams (Grid View)', 'FontSize',14, 'FontWeight','bold');
-saveas(gcf, 'output/ternary_grid_2x2.png');
-exportgraphics(gcf, 'output/ternary_grid_2x2_HR.png', 'Resolution', 300);
+saveas(gcf, fullfile(figDir, 'ternary_grid_2x2.png');
+exportgraphics(gcf, fullfile(figDir, 'ternary_grid_2x2_HR.png'), 'Resolution', 300);
 fprintf('  Saved: ternary_grid_2x2.png\n');
 
 %% ---- 图3: 四种体系的 Ratio-Solvent 对比图 ----
@@ -368,8 +374,8 @@ for sid = 1:4
     grid on;
 end
 sgtitle('Four-System Ratio-Solvent Phase Diagrams (Grid View)', 'FontSize',14, 'FontWeight','bold');
-saveas(gcf, 'output/ratio_grid_2x2.png');
-exportgraphics(gcf, 'output/ratio_grid_2x2_HR.png', 'Resolution', 300);
+saveas(gcf, fullfile(figDir, 'ratio_grid_2x2.png');
+exportgraphics(gcf, fullfile(figDir, 'ratio_grid_2x2_HR.png'), 'Resolution', 300);
 fprintf('  Saved: ratio_grid_2x2.png\n');
 
 %% ---- 图4: PM6 vs D18 同溶剂对比 (横向对比) ----
@@ -422,8 +428,8 @@ legend({'PM6-OXy','','D18-OXy',''}, 'Location', 'best', 'FontSize', 9);
 xlim([0 1]); ylim([0 1]); grid on;
 
 sgtitle('Donor Comparison under Same Solvent', 'FontSize',14, 'FontWeight','bold');
-saveas(gcf, 'output/ratio_donor_compare.png');
-exportgraphics(gcf, 'output/ratio_donor_compare_HR.png', 'Resolution', 300);
+saveas(gcf, fullfile(figDir, 'ratio_donor_compare.png');
+exportgraphics(gcf, fullfile(figDir, 'ratio_donor_compare_HR.png'), 'Resolution', 300);
 fprintf('  Saved: ratio_donor_compare.png\n');
 
 %% ---- 图5: 溶剂效应对比 (PM6/D18 分别对比 Tol vs OXy) ----
@@ -476,25 +482,25 @@ legend({'D18-Tol','','D18-OXy',''}, 'Location', 'best', 'FontSize', 9);
 xlim([0 1]); ylim([0 1]); grid on;
 
 sgtitle('Solvent Effect Comparison for Each Donor', 'FontSize',14, 'FontWeight','bold');
-saveas(gcf, 'output/ratio_solvent_compare.png');
-exportgraphics(gcf, 'output/ratio_solvent_compare_HR.png', 'Resolution', 300);
+saveas(gcf, fullfile(figDir, 'ratio_solvent_compare.png');
+exportgraphics(gcf, fullfile(figDir, 'ratio_solvent_compare_HR.png'), 'Resolution', 300);
 fprintf('  Saved: ratio_solvent_compare.png\n');
 
 %% ===== 最终总结 =====
 fprintf('\n%s\n', repmat('=',1,70));
 fprintf('  FOUR-SYSTEM DELIVERY COMPLETE\n');
 fprintf('%s\n', repmat('=',1,70));
-fprintf('\nOutput files in output/:\n');
+fprintf('\nOutput files in output/data/ and output/figures/:\n');
 for sid = 1:4
     res = all_res{sid};
-    fprintf('  binodal_%s.csv / critical_%s.csv / spinodal_%s.csv\n', res.tag, res.tag, res.tag);
+    fprintf('  data/binodal_%s.csv / data/critical_%s.csv / data/spinodal_%s.csv\n', res.tag, res.tag, res.tag);
 end
-fprintf('  ternary_four_systems.png     — 四体系综合三元相图\n');
-fprintf('  ternary_grid_2x2.png         — 2x2 分面三元相图\n');
-fprintf('  ratio_grid_2x2.png           — 2x2 分面 Ratio-Solvent 图\n');
-fprintf('  ratio_donor_compare.png      — 给体对比 (同溶剂)\n');
-fprintf('  ratio_solvent_compare.png    — 溶剂对比 (同给体)\n');
-fprintf('  *_HR.png                     — 300 DPI 高清版本\n');
+fprintf('  figures/ternary_four_systems.png     — 四体系综合三元相图\n');
+fprintf('  figures/ternary_grid_2x2.png         — 2x2 分面三元相图\n');
+fprintf('  figures/ratio_grid_2x2.png           — 2x2 分面 Ratio-Solvent 图\n');
+fprintf('  figures/ratio_donor_compare.png      — 给体对比 (同溶剂)\n');
+fprintf('  figures/ratio_solvent_compare.png    — 溶剂对比 (同给体)\n');
+fprintf('  figures/*_HR.png                     — 300 DPI 高清版本\n');
 
 fprintf('\nOptimized Parameters:\n');
 for sid = 1:4
