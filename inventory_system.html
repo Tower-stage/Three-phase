@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>资产库存管理系统</title>
+<style>
+  :root {
+    --bg: #f5f5f5;
+    --card: #ffffff;
+    --border: #e0e0e0;
+    --text: #333333;
+    --text-secondary: #666666;
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --danger: #ef4444;
+    --danger-hover: #dc2626;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --radius: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+  /* Header */
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+  }
+  .header h1 { font-size: 24px; font-weight: 700; }
+  .header-actions { display: flex; gap: 8px; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border: none; border-radius: var(--radius);
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    transition: all 0.15s ease; text-decoration: none;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-outline { background: #fff; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { background: #f9f9f9; }
+  .btn-danger { background: #fff; color: var(--danger); border: 1px solid var(--danger); }
+  .btn-danger:hover { background: #fef2f2; }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-icon { padding: 4px 8px; min-width: 28px; justify-content: center; }
+
+  /* View Toggle */
+  .view-toggle {
+    display: flex; background: #e5e7eb; border-radius: var(--radius);
+    padding: 2px; margin-bottom: 20px;
+  }
+  .view-toggle button {
+    flex: 1; padding: 8px 20px; border: none; background: transparent;
+    font-size: 14px; font-weight: 500; cursor: pointer; border-radius: 6px;
+    transition: all 0.15s ease; color: var(--text-secondary);
+  }
+  .view-toggle button.active {
+    background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  /* Table View */
+  .table-wrapper {
+    background: var(--card); border-radius: var(--radius);
+    border: 1px solid var(--border); overflow-x: auto;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { background: #fafafa; }
+  th {
+    padding: 10px 12px; text-align: left; font-weight: 600;
+    color: var(--text-secondary); border-bottom: 2px solid var(--border);
+    white-space: nowrap; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; }
+  tr:hover td { background: #fafcff; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Calculated fields styling */
+  .calc-field { background: #f0fdf4; color: #166534; font-weight: 600; }
+  .calc-header { background: #f0fdf4; }
+
+  /* Inputs in table */
+  td input {
+    width: 100%; padding: 6px 8px; border: 1px solid transparent;
+    border-radius: 4px; font-size: 13px; background: transparent;
+    transition: border-color 0.15s ease;
+  }
+  td input:hover { border-color: #d0d0d0; }
+  td input:focus { outline: none; border-color: var(--primary); background: #fff; }
+  td input.num { text-align: right; width: 80px; }
+
+  /* Form View */
+  .form-view { display: none; }
+  .form-view.active { display: block; }
+  .table-view { display: block; }
+  .table-view.hidden { display: none; }
+
+  .form-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; max-width: 600px; margin: 0 auto;
+  }
+  .form-card h2 { font-size: 18px; margin-bottom: 20px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block; font-size: 13px; font-weight: 600;
+    color: var(--text-secondary); margin-bottom: 4px;
+  }
+  .form-group input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: var(--radius); font-size: 14px;
+    transition: border-color 0.15s ease;
+  }
+  .form-group input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+  .form-group input[type="number"] { -moz-appearance: textfield; }
+  .form-group input[type="number"]::-webkit-outer-spin-button,
+  .form-group input[type="number"]::-webkit-inner-spin-button { opacity: 1; }
+  .form-actions { display: flex; gap: 8px; margin-top: 24px; }
+
+  /* Summary bar */
+  .summary-bar {
+    display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .summary-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 20px; min-width: 140px;
+  }
+  .summary-card .label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+  .summary-card .value { font-size: 20px; font-weight: 700; }
+  .summary-card .value.stock { color: var(--primary); }
+  .summary-card .value.used { color: var(--warning); }
+  .summary-card .value.remaining { color: var(--success); }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state p { font-size: 14px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: #1f2937; color: #fff; padding: 12px 20px;
+    border-radius: var(--radius); font-size: 14px;
+    transform: translateY(100px); opacity: 0; transition: all 0.3s ease;
+    z-index: 1000;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+
+  @media (max-width: 768px) {
+    .container { padding: 12px; }
+    .header h1 { font-size: 20px; }
+    .summary-bar { flex-direction: column; }
+    th, td { padding: 6px 8px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>📦 资产库存管理系统</h1>
+    <div class="header-actions">
+      <button class="btn btn-primary" onclick="showForm(null)">+ 新增资产</button>
+      <button class="btn btn-outline" onclick="exportCSV()">导出 CSV</button>
+      <button class="btn btn-outline" onclick="resetData()">重置数据</button>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="summary-bar">
+    <div class="summary-card">
+      <div class="label">资产总数</div>
+      <div class="value stock" id="summary-count">0</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">初始库存合计</div>
+      <div class="value stock" id="summary-stock">0</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">总领用量</div>
+      <div class="value used" id="summary-used">0</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">当前终存合计</div>
+      <div class="value remaining" id="summary-remaining">0</div>
+    </div>
+  </div>
+
+  <!-- View Toggle -->
+  <div class="view-toggle">
+    <button class="active" onclick="switchView('table')" id="tab-table">📋 入库清单（表格视图）</button>
+    <button onclick="switchView('form')" id="tab-form">📝 快速录入（表单视图）</button>
+  </div>
+
+  <!-- ============ TABLE VIEW ============ -->
+  <div class="table-view" id="table-view">
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px">#</th>
+            <th style="min-width:140px">类别（资产名称）</th>
+            <th style="width:100px" class="calc-header">库存<br><small>初始总量</small></th>
+            <th style="width:80px">1用</th>
+            <th style="width:80px">2用</th>
+            <th style="width:80px">3用</th>
+            <th style="width:80px">4用</th>
+            <th style="width:100px" class="calc-header">终存<br><small>库存 - SUM(1~4用)</small></th>
+            <th style="width:100px" class="calc-header">储存区<br><small>= 终存</small></th>
+            <th style="width:60px">操作</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+        </tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="empty-state">
+      <div class="icon">📭</div>
+      <p>暂无资产记录</p>
+      <p style="font-size:13px;color:#999">点击 "+ 新增资产" 添加第一条记录</p>
+    </div>
+  </div>
+
+  <!-- ============ FORM VIEW ============ -->
+  <div class="form-view" id="form-view">
+    <div class="form-card">
+      <h2 id="form-title">新增资产</h2>
+      <form id="asset-form" onsubmit="saveAsset(event)">
+        <input type="hidden" id="edit-id" value="">
+
+        <div class="form-group">
+          <label for="f-category">类别 <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="f-category" placeholder="例如：笔记本电脑、投影仪、办公桌..." required autofocus>
+        </div>
+
+        <div class="form-group">
+          <label for="f-stock">初始库存（数量） <span style="color:var(--danger)">*</span></label>
+          <input type="number" id="f-stock" placeholder="0" min="0" step="1" required>
+        </div>
+
+        <fieldset style="border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px">
+          <legend style="font-size:13px;font-weight:600;color:var(--text-secondary);padding:0 8px">
+            使用记录（可选，可后续在表格中填写）
+          </legend>
+
+          <div class="form-group">
+            <label for="f-use1">1用</label>
+            <input type="number" id="f-use1" placeholder="0" min="0" step="1" value="0">
+          </div>
+          <div class="form-group">
+            <label for="f-use2">2用</label>
+            <input type="number" id="f-use2" placeholder="0" min="0" step="1" value="0">
+          </div>
+          <div class="form-group">
+            <label for="f-use3">3用</label>
+            <input type="number" id="f-use3" placeholder="0" min="0" step="1" value="0">
+          </div>
+          <div class="form-group">
+            <label for="f-use4">4用</label>
+            <input type="number" id="f-use4" placeholder="0" min="0" step="1" value="0">
+          </div>
+        </fieldset>
+
+        <div style="background:#f0fdf4;padding:12px;border-radius:var(--radius);margin-bottom:16px;font-size:13px;color:#166534">
+          💡 <strong>自动计算字段（仅表格视图可见）：</strong><br>
+          终存 = 库存 - SUM(1用, 2用, 3用, 4用)<br>
+          储存区 = 终存
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">💾 保存</button>
+          <button type="button" class="btn btn-outline" onclick="switchView('table')">取消</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================================
+// DATA STORE (localStorage-backed)
+// ============================================================================
+const STORAGE_KEY = 'inventory_assets';
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : getDemoData();
+  } catch (e) {
+    return getDemoData();
+  }
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function getDemoData() {
+  return [
+    { id: '1', category: '笔记本电脑 ThinkPad X1', stock: 50, use1: 5, use2: 3, use3: 2, use4: 1 },
+    { id: '2', category: '投影仪 Epson CB-X51', stock: 20, use1: 2, use2: 1, use3: 0, use4: 0 },
+    { id: '3', category: '办公桌 1.4m', stock: 100, use1: 10, use2: 8, use3: 5, use4: 3 },
+    { id: '4', category: '人体工学椅', stock: 80, use1: 6, use2: 4, use3: 3, use4: 2 },
+    { id: '5', category: '显示器 Dell U2723QE', stock: 30, use1: 4, use2: 2, use3: 1, use4: 0 },
+  ];
+}
+
+let assets = loadData();
+
+// ============================================================================
+// COMPUTED FIELDS
+// ============================================================================
+function calcFinal(stock, use1, use2, use3, use4) {
+  return stock - (use1 + use2 + use3 + use4);
+}
+
+function calcStorage(finalStock) {
+  return finalStock;
+}
+
+// ============================================================================
+// RENDER TABLE
+// ============================================================================
+function renderTable() {
+  const tbody = document.getElementById('table-body');
+  const emptyState = document.getElementById('empty-state');
+
+  if (assets.length === 0) {
+    tbody.innerHTML = '';
+    emptyState.style.display = 'block';
+  } else {
+    emptyState.style.display = 'none';
+    tbody.innerHTML = assets.map((a, i) => {
+      const finalStock = calcFinal(
+        Number(a.stock), Number(a.use1), Number(a.use2), Number(a.use3), Number(a.use4)
+      );
+      const storage = calcStorage(finalStock);
+      const lowStock = finalStock < 5 ? 'style="color:#ef4444;font-weight:700"' : '';
+
+      return `
+        <tr data-id="${a.id}">
+          <td>${i + 1}</td>
+          <td>
+            <input type="text" value="${escapeHtml(a.category)}"
+                   data-field="category" data-id="${a.id}"
+                   placeholder="资产名称">
+          </td>
+          <td>
+            <input type="number" value="${a.stock}" min="0" step="1"
+                   class="num" data-field="stock" data-id="${a.id}"
+                   placeholder="0">
+          </td>
+          <td><input type="number" value="${a.use1}" min="0" step="1"
+                     class="num" data-field="use1" data-id="${a.id}" placeholder="0"></td>
+          <td><input type="number" value="${a.use2}" min="0" step="1"
+                     class="num" data-field="use2" data-id="${a.id}" placeholder="0"></td>
+          <td><input type="number" value="${a.use3}" min="0" step="1"
+                     class="num" data-field="use3" data-id="${a.id}" placeholder="0"></td>
+          <td><input type="number" value="${a.use4}" min="0" step="1"
+                     class="num" data-field="use4" data-id="${a.id}" placeholder="0"></td>
+          <td class="calc-field" ${lowStock}>${finalStock}</td>
+          <td class="calc-field">${storage}</td>
+          <td>
+            <button class="btn btn-outline btn-sm btn-icon" title="编辑" onclick="showForm('${a.id}')">✏️</button>
+            <button class="btn btn-danger btn-sm btn-icon" title="删除" onclick="deleteAsset('${a.id}')">🗑</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  updateSummary();
+}
+
+function updateSummary() {
+  document.getElementById('summary-count').textContent = assets.length;
+
+  let totalStock = 0, totalUsed = 0, totalRemaining = 0;
+  assets.forEach(a => {
+    const s = Number(a.stock);
+    const u1 = Number(a.use1), u2 = Number(a.use2), u3 = Number(a.use3), u4 = Number(a.use4);
+    totalStock += s;
+    totalUsed += u1 + u2 + u3 + u4;
+    totalRemaining += s - (u1 + u2 + u3 + u4);
+  });
+
+  document.getElementById('summary-stock').textContent = totalStock;
+  document.getElementById('summary-used').textContent = totalUsed;
+  document.getElementById('summary-remaining').textContent = totalRemaining;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ============================================================================
+// INLINE EDITING (table cells)
+// ============================================================================
+document.addEventListener('change', function(e) {
+  const input = e.target;
+  if (!input.dataset.field || !input.dataset.id) return;
+
+  const id = input.dataset.id;
+  const field = input.dataset.field;
+  const value = input.type === 'number' ? Math.max(0, parseInt(input.value) || 0) : input.value;
+
+  const asset = assets.find(a => a.id === id);
+  if (asset) {
+    asset[field] = value;
+    saveData(assets);
+    renderTable();
+    showToast('已更新', 'success');
+  }
+});
+
+// ============================================================================
+// CRUD OPERATIONS
+// ============================================================================
+function showForm(editId) {
+  document.getElementById('table-view').classList.add('hidden');
+  document.getElementById('form-view').classList.add('active');
+
+  document.getElementById('tab-table').classList.remove('active');
+  document.getElementById('tab-form').classList.add('active');
+
+  if (editId) {
+    document.getElementById('form-title').textContent = '编辑资产';
+    document.getElementById('edit-id').value = editId;
+    const a = assets.find(x => x.id === editId);
+    if (a) {
+      document.getElementById('f-category').value = a.category;
+      document.getElementById('f-stock').value = a.stock;
+      document.getElementById('f-use1').value = a.use1 || 0;
+      document.getElementById('f-use2').value = a.use2 || 0;
+      document.getElementById('f-use3').value = a.use3 || 0;
+      document.getElementById('f-use4').value = a.use4 || 0;
+    }
+  } else {
+    document.getElementById('form-title').textContent = '新增资产';
+    document.getElementById('edit-id').value = '';
+    document.getElementById('asset-form').reset();
+    document.getElementById('f-use1').value = 0;
+    document.getElementById('f-use2').value = 0;
+    document.getElementById('f-use3').value = 0;
+    document.getElementById('f-use4').value = 0;
+  }
+
+  document.getElementById('f-category').focus();
+}
+
+function saveAsset(event) {
+  event.preventDefault();
+
+  const editId = document.getElementById('edit-id').value;
+  const category = document.getElementById('f-category').value.trim();
+  const stock = parseInt(document.getElementById('f-stock').value) || 0;
+  const use1 = parseInt(document.getElementById('f-use1').value) || 0;
+  const use2 = parseInt(document.getElementById('f-use2').value) || 0;
+  const use3 = parseInt(document.getElementById('f-use3').value) || 0;
+  const use4 = parseInt(document.getElementById('f-use4').value) || 0;
+
+  if (!category) {
+    showToast('请输入资产名称（类别）', 'error');
+    return;
+  }
+  if (stock < 0) {
+    showToast('库存数量不能为负数', 'error');
+    return;
+  }
+
+  if (editId) {
+    // Update existing
+    const a = assets.find(x => x.id === editId);
+    if (a) {
+      a.category = category;
+      a.stock = stock;
+      a.use1 = use1;
+      a.use2 = use2;
+      a.use3 = use3;
+      a.use4 = use4;
+    }
+    showToast('资产已更新', 'success');
+  } else {
+    // Create new
+    const newAsset = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      category,
+      stock,
+      use1,
+      use2,
+      use3,
+      use4,
+    };
+    assets.push(newAsset);
+    showToast('资产已添加', 'success');
+  }
+
+  saveData(assets);
+  renderTable();
+  switchView('table');
+}
+
+function deleteAsset(id) {
+  const asset = assets.find(a => a.id === id);
+  if (!asset) return;
+
+  if (confirm(`确定要删除 "${asset.category}" 吗？此操作不可恢复。`)) {
+    assets = assets.filter(a => a.id !== id);
+    saveData(assets);
+    renderTable();
+    showToast('已删除', 'success');
+  }
+}
+
+// ============================================================================
+// VIEW SWITCHING
+// ============================================================================
+function switchView(view) {
+  const tableView = document.getElementById('table-view');
+  const formView = document.getElementById('form-view');
+  const tabTable = document.getElementById('tab-table');
+  const tabForm = document.getElementById('tab-form');
+
+  if (view === 'table') {
+    tableView.classList.remove('hidden');
+    formView.classList.remove('active');
+    tabTable.classList.add('active');
+    tabForm.classList.remove('active');
+    renderTable();
+  } else {
+    tableView.classList.add('hidden');
+    formView.classList.add('active');
+    tabTable.classList.remove('active');
+    tabForm.classList.add('active');
+    showForm(null);
+  }
+}
+
+// ============================================================================
+// UTILITIES
+// ============================================================================
+function exportCSV() {
+  if (assets.length === 0) {
+    showToast('没有数据可导出', 'error');
+    return;
+  }
+
+  const headers = ['类别','库存','1用','2用','3用','4用','终存','储存区'];
+  const rows = assets.map(a => {
+    const f = calcFinal(Number(a.stock), Number(a.use1), Number(a.use2), Number(a.use3), Number(a.use4));
+    return [a.category, a.stock, a.use1, a.use2, a.use3, a.use4, f, f];
+  });
+
+  const csv = [headers, ...rows]
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+
+  const BOM = '﻿';
+  const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `资产库存_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV 已导出', 'success');
+}
+
+let _resetCount = 0;
+function resetData() {
+  _resetCount++;
+  if (_resetCount < 3) {
+    showToast(`请再次点击"重置数据"确认（${_resetCount}/3）`, 'error');
+    return;
+  }
+  _resetCount = 0;
+  if (confirm('确定要重置所有数据吗？这将恢复为演示数据，所有修改将丢失！')) {
+    localStorage.removeItem(STORAGE_KEY);
+    assets = getDemoData();
+    saveData(assets);
+    renderTable();
+    showToast('数据已重置为演示数据', 'success');
+  }
+}
+
+function showToast(msg, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'toast ' + (type || '') + ' show';
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => { toast.classList.remove('show'); }, 2000);
+}
+
+// ============================================================================
+// INIT
+// ============================================================================
+renderTable();
+</script>
+</body>
+</html>
