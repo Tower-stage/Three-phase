@@ -5,7 +5,7 @@ import openpyxl
 from openpyxl.utils import get_column_letter
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'output', 'data')
-OUT_PATH = os.path.join(os.path.dirname(__file__), 'Ternary_All_Data.xlsx')
+OUT_PATH = os.path.join(os.path.dirname(__file__), 'Ternary_All_Data_v2.xlsx')
 
 SYSTEMS = [
     ('PM6_Tol', 'PM6 / L8-Bo / Toluene'),
@@ -30,9 +30,12 @@ for tag, title in SYSTEMS:
         with open(bin_file, 'r') as f:
             reader = csv.reader(f)
             header = next(reader)
-            for row in reader:
+            rows = list(reader)
+            # Only concentrated phase: odd rows (0, 2, 4, ...)
+            for i in range(0, len(rows)-1, 2):
+                row = rows[i]
                 if len(row) >= 4:
-                    bino_data.append([float(row[1]), float(row[2]), float(row[3])])
+                    bino_data.append([float(row[1]), float(row[3]), float(row[2])])  # phi1, phi2, phi3
 
     # ===== SPINODAL =====
     spin_file = os.path.join(DATA_DIR, f'spinodal_{tag}.csv')
@@ -43,7 +46,7 @@ for tag, title in SYSTEMS:
             header = next(reader)
             for row in reader:
                 if len(row) >= 4:
-                    spin_data.append([float(row[1]), float(row[2]), float(row[3])])
+                    spin_data.append([float(row[1]), float(row[3]), float(row[2])])  # phi1, phi2, phi3
 
     # ===== CRITICAL =====
     crit_file = os.path.join(DATA_DIR, f'critical_{tag}.csv')
@@ -63,7 +66,7 @@ for tag, title in SYSTEMS:
 
     # Row 2: System info
     ws.merge_cells('A2:I2')
-    n_tls = len(bino_data) // 2
+    n_tls = len(bino_data)  # concentrated phase only
     n_spin = len(spin_data)
     info_parts = [f'{n_tls} tie-line pairs', f'{n_spin} spinodal points']
     if crit_vals:
@@ -72,9 +75,9 @@ for tag, title in SYSTEMS:
     ws['A2'].font = openpyxl.styles.Font(color='666666', size=10)
 
     # Row 4: Column headers
-    headers = ['phi1_L8Bo', 'phi3_Donor', 'phi2_Solvent',
+    headers = ['phi1_L8Bo', 'phi2_Solvent', 'phi3_Donor',
                '',  # spacer
-               'phi1_L8Bo', 'phi3_Donor', 'phi2_Solvent']
+               'phi1_L8Bo', 'phi2_Solvent', 'phi3_Donor']
     header_notes = ['BINODAL', '', '', '', 'SPINODAL', '', '']
     for j, h in enumerate(headers):
         if h:
@@ -86,7 +89,7 @@ for tag, title in SYSTEMS:
             cell.font = openpyxl.styles.Font(bold=True, color='FFFFFF', size=10)
     # Section labels
     ws.merge_cells('A3:C3')
-    ws['A3'] = 'BINODAL (concentrated + dilute phases alternating)'
+    ws['A3'] = 'BINODAL (concentrated phase only)'
     ws['A3'].font = openpyxl.styles.Font(bold=True, color='4472C4', size=11)
     ws.merge_cells('F3:H3')
     ws['F3'] = 'SPINODAL'
