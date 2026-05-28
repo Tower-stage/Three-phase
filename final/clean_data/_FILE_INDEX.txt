@@ -1,0 +1,15 @@
+Concentrated / Dilute Binodal Data ！ Separated
+================================================
+
+For each system, THREE files:
+  binodal_{system}_concentrated.csv  ！ concentrated phase (donor-rich)
+  binodal_{system}_dilute.csv        ！ dilute phase (acceptor-rich)
+  spinodal_{system}.csv              ！ spinodal curve
+  critical_{system}.csv              ！ critical point
+
+Columns in binodal files:
+  phi1_L8Bo = Acceptor volume fraction
+  phi2_Solvent = Solvent volume fraction
+  phi3_Donor = Donor volume fraction
+
+In Origin ternary plot: X=phi1, Y=phi3, Z=phi2

@@ -9,7 +9,7 @@ clear; clc;
 
 %% 自动定位项目根目录（脚本位于 scripts/main/）
 scriptDir = fileparts(mfilename('fullpath'));
-projectDir = fileparts(scriptDir);
+projectDir = fileparts(fileparts(scriptDir));
 dataDir = fullfile(projectDir, 'output', 'data');
 figDir = fullfile(projectDir, 'output', 'figures');
 if ~exist(dataDir, 'dir'), mkdir(dataDir); end
@@ -224,12 +224,8 @@ fprintf('%s\n', repmat('=',1,70));
 colors = {[0 0 0.9], [0 0.6 0], [0.9 0 0], [0.6 0 0.6]};
 
 %% ---- 图1: 四体系综合三元相图 ----
-figure('Position',[50,50,1200,900]); hold on;
-plot([0 0.5],[0 sqrt(3)/2],'k-',[0.5 1],[sqrt(3)/2 0],'k-',[0 1],[0 0],'k-','LineWidth',0.8);
-
-text(0.5, sqrt(3)/2+0.04, 'Solvent (\phi_2)', 'FontSize',12, 'HorizontalAlignment','center', 'FontWeight','bold');
-text(-0.06,-0.03, 'Donor (\phi_3)', 'FontSize',12, 'HorizontalAlignment','right', 'FontWeight','bold');
-text(1.06,-0.03, 'L8-Bo (\phi_1)', 'FontSize',12, 'HorizontalAlignment','left', 'FontWeight','bold');
+h1 = figure('Position',[50,50,1200,900], 'Color','w'); hold on;
+drawTernaryFrame();
 
 lgd = {};
 for sid = 1:4
@@ -238,7 +234,7 @@ for sid = 1:4
     for sg = 1:length(res.spin_segs)
         s1 = res.spin_segs{sg}(:,1); s3 = res.spin_segs{sg}(:,2);
         s2 = 1-s1-s3; v = s1>0 & s2>0 & s3>0 & s1<1 & s2<1 & s3<1;
-        plot(s1(v)+0.5*s2(v), sqrt(3)/2*s2(v), '--', 'Color', clr, 'LineWidth', 1.0);
+        plot(s1(v)+0.5*s2(v), sqrt(3)/2*s2(v), '--', 'Color', [0.7 0.7 0.7], 'LineWidth', 1.0);
     end
     lgd{end+1} = [res.name ' Spinodal'];
 
@@ -246,10 +242,10 @@ for sid = 1:4
     if size(xs,1) >= 2
         x1c = xs(1:2:end,2); x3c = xs(1:2:end,3); x2c = xs(1:2:end,4);
         vc = x1c>0 & x2c>0 & x3c>0;
-        plot(x1c(vc)+0.5*x2c(vc), sqrt(3)/2*x2c(vc), '-', 'Color', clr, 'LineWidth', 2.5);
+        plot(x1c(vc)+0.5*x2c(vc), sqrt(3)/2*x2c(vc), '-', 'Color', [0.953 0.647 0.412], 'LineWidth', 2.5);
         x1d = xs(2:2:end,2); x3d = xs(2:2:end,3); x2d = xs(2:2:end,4);
         vd = x1d>0 & x2d>0 & x3d>0;
-        plot(x1d(vd)+0.5*x2d(vd), sqrt(3)/2*x2d(vd), '-', 'Color', clr, 'LineWidth', 2.5);
+        plot(x1d(vd)+0.5*x2d(vd), sqrt(3)/2*x2d(vd), '-', 'Color', [0.953 0.647 0.412], 'LineWidth', 2.5);
     end
     lgd{end+1} = [res.name ' Binodal'];
 
@@ -259,7 +255,7 @@ for sid = 1:4
         if ic>size(xs,1)||id>size(xs,1), break; end
         plot([xs(ic,2)+0.5*xs(ic,4), xs(id,2)+0.5*xs(id,4)], ...
              [sqrt(3)/2*xs(ic,4), sqrt(3)/2*xs(id,4)], ...
-             '-', 'Color', [clr 0.20], 'LineWidth', 0.4);
+             '-', 'Color', [0.259 0.565 0.769 0.30], 'LineWidth', 0.4);
     end
 
     cp_x = res.x1_crit+0.5*(1-res.x1_crit-res.x3_crit);
@@ -279,34 +275,30 @@ annotation('textbox',[0.15,0.70,0.32,0.22],'String',{...
     '','Flory-Huggins theory','Optimized via 3D grid sweep'},...
     'FontSize',8,'BackgroundColor','w','EdgeColor',[0.5 0.5 0.5]);
 
-saveas(gcf, fullfile(figDir, 'ternary_four_systems.png'));
-exportgraphics(gcf, fullfile(figDir, 'ternary_four_systems_HR.png'), 'Resolution', 300);
+saveas(h1, fullfile(figDir, 'ternary_four_systems.png'));
+exportgraphics(h1, fullfile(figDir, 'ternary_four_systems_HR.png'), 'Resolution', 300);
 fprintf('  Saved: ternary_four_systems.png\n');
 
 %% ---- 图2: 分面对比 (2x2 子图) ----
-figure('Position',[50,50,1400,1200]);
+h2 = figure('Position',[50,50,1400,1200], 'Color','w');
 for sid = 1:4
     res = all_res{sid}; xs = res.x_sol;
     subplot(2,2,sid); hold on;
-    plot([0 0.5],[0 sqrt(3)/2],'k-',[0.5 1],[sqrt(3)/2 0],'k-',[0 1],[0 0],'k-','LineWidth',0.6);
-
-    text(-0.04,-0.02,'Donor','FontSize',9,'FontWeight','bold');
-    text(1.04,-0.02,'L8-Bo','FontSize',9,'FontWeight','bold');
-    text(0.5,sqrt(3)/2+0.025,res.solvent,'FontSize',9,'FontWeight','bold');
+    drawTernaryFrame();
 
     for sg = 1:length(res.spin_segs)
         s1=res.spin_segs{sg}(:,1); s3=res.spin_segs{sg}(:,2);
         s2=1-s1-s3; v=s1>0&s2>0&s3>0&s1<1&s2<1&s3<1;
-        plot(s1(v)+0.5*s2(v), sqrt(3)/2*s2(v), 'r--', 'LineWidth', 1.0);
+        plot(s1(v)+0.5*s2(v), sqrt(3)/2*s2(v), '--', 'Color', [0.7 0.7 0.7], 'LineWidth', 1.0);
     end
 
     if size(xs,1)>=2
         x1c=xs(1:2:end,2);x3c=xs(1:2:end,3);x2c=xs(1:2:end,4);
         vc=x1c>0&x2c>0&x3c>0;
-        plot(x1c(vc)+0.5*x2c(vc), sqrt(3)/2*x2c(vc), 'b-', 'LineWidth', 2.2);
+        plot(x1c(vc)+0.5*x2c(vc), sqrt(3)/2*x2c(vc), '-', 'Color', [0.953 0.647 0.412], 'LineWidth', 2.2);
         x1d=xs(2:2:end,2);x3d=xs(2:2:end,3);x2d=xs(2:2:end,4);
         vd=x1d>0&x2d>0&x3d>0;
-        plot(x1d(vd)+0.5*x2d(vd), sqrt(3)/2*x2d(vd), 'b-', 'LineWidth', 2.2);
+        plot(x1d(vd)+0.5*x2d(vd), sqrt(3)/2*x2d(vd), '-', 'Color', [0.953 0.647 0.412], 'LineWidth', 2.2);
     end
 
     nt = floor(size(xs,1)/2); step_ = max(1, floor(nt/10));
@@ -314,12 +306,13 @@ for sid = 1:4
         ic=2*k-1;id=2*k;
         plot([xs(ic,2)+0.5*xs(ic,4),xs(id,2)+0.5*xs(id,4)],...
             [sqrt(3)/2*xs(ic,4),sqrt(3)/2*xs(id,4)],...
-            'Color',[0.6 0.6 0.6],'LineWidth',0.4);
+            '-', 'Color', [0.259 0.565 0.769 0.35], 'LineWidth', 0.5);
     end
 
     cp_x=res.x1_crit+0.5*(1-res.x1_crit-res.x3_crit);
     cp_y=sqrt(3)/2*(1-res.x1_crit-res.x3_crit);
-    plot(cp_x,cp_y,'ro','MarkerSize',9,'MarkerFaceColor','r');
+    plot(cp_x,cp_y,'o','MarkerSize',9,'MarkerFaceColor',[0.953 0.647 0.412],...
+        'MarkerEdgeColor','k','LineWidth',1.2);
 
     axis equal off;
     title(sprintf('%s: %s\nv3=%.0f  X_{13}=%.2f  g_{23}=%.3f', ...
@@ -328,12 +321,12 @@ for sid = 1:4
     legend({'Spinodal','Binodal','Tie lines','CP'},'Location','southwest','FontSize',7);
 end
 sgtitle('Four-System Ternary Phase Diagrams (Grid View)', 'FontSize',14, 'FontWeight','bold');
-saveas(gcf, fullfile(figDir, 'ternary_grid_2x2.png');
-exportgraphics(gcf, fullfile(figDir, 'ternary_grid_2x2_HR.png'), 'Resolution', 300);
+saveas(h2, fullfile(figDir, 'ternary_grid_2x2.png'));
+exportgraphics(h2, fullfile(figDir, 'ternary_grid_2x2_HR.png'), 'Resolution', 300);
 fprintf('  Saved: ternary_grid_2x2.png\n');
 
 %% ---- 图3: 四种体系的 Ratio-Solvent 对比图 ----
-figure('Position',[50,50,1400,1200]);
+h3 = figure('Position',[50,50,1400,1200]);
 for sid = 1:4
     res = all_res{sid}; xs = res.x_sol;
     if size(xs,1) < 6, continue; end
@@ -374,12 +367,12 @@ for sid = 1:4
     grid on;
 end
 sgtitle('Four-System Ratio-Solvent Phase Diagrams (Grid View)', 'FontSize',14, 'FontWeight','bold');
-saveas(gcf, fullfile(figDir, 'ratio_grid_2x2.png');
-exportgraphics(gcf, fullfile(figDir, 'ratio_grid_2x2_HR.png'), 'Resolution', 300);
+saveas(h3, fullfile(figDir, 'ratio_grid_2x2.png'));
+exportgraphics(h3, fullfile(figDir, 'ratio_grid_2x2_HR.png'), 'Resolution', 300);
 fprintf('  Saved: ratio_grid_2x2.png\n');
 
 %% ---- 图4: PM6 vs D18 同溶剂对比 (横向对比) ----
-figure('Position',[50,50,1200,550]);
+h4 = figure('Position',[50,50,1200,550]);
 
 % Toluene 对比
 subplot(1,2,1); hold on;
@@ -428,12 +421,12 @@ legend({'PM6-OXy','','D18-OXy',''}, 'Location', 'best', 'FontSize', 9);
 xlim([0 1]); ylim([0 1]); grid on;
 
 sgtitle('Donor Comparison under Same Solvent', 'FontSize',14, 'FontWeight','bold');
-saveas(gcf, fullfile(figDir, 'ratio_donor_compare.png');
-exportgraphics(gcf, fullfile(figDir, 'ratio_donor_compare_HR.png'), 'Resolution', 300);
+saveas(h4, fullfile(figDir, 'ratio_donor_compare.png'));
+exportgraphics(h4, fullfile(figDir, 'ratio_donor_compare_HR.png'), 'Resolution', 300);
 fprintf('  Saved: ratio_donor_compare.png\n');
 
 %% ---- 图5: 溶剂效应对比 (PM6/D18 分别对比 Tol vs OXy) ----
-figure('Position',[50,50,1200,550]);
+h5 = figure('Position',[50,50,1200,550]);
 
 % PM6 溶剂对比
 subplot(1,2,1); hold on;
@@ -482,8 +475,8 @@ legend({'D18-Tol','','D18-OXy',''}, 'Location', 'best', 'FontSize', 9);
 xlim([0 1]); ylim([0 1]); grid on;
 
 sgtitle('Solvent Effect Comparison for Each Donor', 'FontSize',14, 'FontWeight','bold');
-saveas(gcf, fullfile(figDir, 'ratio_solvent_compare.png');
-exportgraphics(gcf, fullfile(figDir, 'ratio_solvent_compare_HR.png'), 'Resolution', 300);
+saveas(h5, fullfile(figDir, 'ratio_solvent_compare.png'));
+exportgraphics(h5, fullfile(figDir, 'ratio_solvent_compare_HR.png'), 'Resolution', 300);
 fprintf('  Saved: ratio_solvent_compare.png\n');
 
 %% ===== 最终总结 =====
@@ -507,6 +500,41 @@ for sid = 1:4
     res = all_res{sid};
     fprintf('  %-10s  v3=%6.0f  X13=%.2f  g23=%.3f  v2=%6.1f\n', ...
         res.tag, res.v3, res.X13, res.g23, res.v2);
+end
+
+%% ===== 三元图边框绘制 =====
+function drawTernaryFrame()
+    s3 = sqrt(3);
+    % Blue triangle border
+    plot([0 0.5],[0 s3/2],'-',[0.5 1],[s3/2 0],'-',[0 1],[0 0],'-',...
+        'Color',[0.259 0.565 0.769], 'LineWidth',2.0);
+    % Grid lines at 25% intervals
+    for lv = [0.25 0.50 0.75]
+        y = lv * s3/2;
+        plot([lv/2 1-lv/2],[y y],'-','Color',[0.85 0.85 0.85],'LineWidth',0.3);
+        plot([lv lv/2],[0 y],'-','Color',[0.85 0.85 0.85],'LineWidth',0.3);
+        plot([1-lv 1-lv/2],[0 y],'-','Color',[0.85 0.85 0.85],'LineWidth',0.3);
+    end
+    % Tick labels — parallel to axes
+    for pct = [25 50 75]
+        val = pct/100;
+        % Bottom axis (phi_Acceptor): along bottom edge
+        text(val, -0.025, num2str(pct), 'FontSize',7, 'Color',[0.5 0.5 0.5],...
+            'HorizontalAlignment','center', 'VerticalAlignment','top');
+        % Left edge (phi_Donor)
+        text(val/2-0.025, val*s3/2, num2str(pct), 'FontSize',7, 'Color',[0.5 0.5 0.5],...
+            'HorizontalAlignment','right', 'Rotation',60);
+        % Right edge (phi_Solvent)
+        text(1-val/2+0.025, val*s3/2, num2str(pct), 'FontSize',7, 'Color',[0.5 0.5 0.5],...
+            'HorizontalAlignment','left', 'Rotation',-60);
+    end
+    % Vertex labels
+    text(-0.05,-0.04,'\phi_{Donor} (%)','FontSize',11,'FontWeight','bold',...
+        'HorizontalAlignment','right');
+    text(1.04,-0.04,'\phi_{Acceptor} (%)','FontSize',11,'FontWeight','bold',...
+        'HorizontalAlignment','left');
+    text(0.5, s3/2+0.04,'\phi_{Solvent} (%)','FontSize',11,'FontWeight','bold',...
+        'HorizontalAlignment','center');
 end
 
 %% ===== 化学势等式 =====

@@ -1,0 +1,7 @@
+system,donor,solvent,CP_phi1_L8Bo,CP_phi3_donor,CP_phi2_solvent_Y,donor_acceptor_ratio,boiling_point_C,trajectory_type
+PM6_Tol,PM6,Toluene,0.2311,0.0506,0.7184,0.82,110.6,早相分离_畴区过粗
+PM6_OXy,PM6,o-Xylene,0.2717,0.0522,0.6755,0.84,144.4,延迟相分离
+D18_Tol,D18,Toluene,0.1269,0.0545,0.8186,0.70,110.6,最早相分离_过度粗化
+D18_OXy,D18,o-Xylene,0.5026,0.0690,0.4284,0.88,144.4,最晚相分离_预聚集补偿
+PM6_CF,PM6,Chloroform,0.5291,0.0652,0.4058,0.89,61.2,最优_极速穿越两相区
+D18_CF,D18,Chloroform,0.5543,0.0862,0.3595,0.87,61.2,最优_最低CP

@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日程管理系统 — 月·周·日 三重对齐</title>
+<style>
+  :root {
+    --bg: #f8f9fa; --card: #fff; --border: #e5e7eb;
+    --text: #1f2937; --text2: #6b7280; --text3: #9ca3af;
+    --pri: #4f46e5; --pri-light: #eef2ff;
+    --morning: #fef3c7; --afternoon: #fce7f3; --evening: #e0e7ff;
+    --morning-tag: #d97706; --afternoon-tag: #db2777; --evening-tag: #4f46e5;
+    --done: #10b981; --danger: #ef4444; --warn: #f59e0b;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, 'Microsoft YaHei', sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
+  .app { max-width:1300px; margin:0 auto; padding:20px; }
+
+  header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+  h1 { font-size:22px; color:var(--pri); }
+  .btn { padding:7px 14px; border:none; border-radius:var(--radius-sm); cursor:pointer; font-size:13px; font-weight:600; transition:all .15s; }
+  .btn-pri { background:var(--pri); color:#fff; }
+  .btn-pri:hover { opacity:.85; }
+  .btn-out { background:#fff; color:var(--text); border:1px solid var(--border); }
+  .btn-out:hover { background:#f9fafb; }
+  .btn-sm { padding:3px 8px; font-size:11px; }
+  .btn-done { background:var(--done); color:#fff; }
+  .btn-del { background:transparent; color:var(--danger); padding:2px 6px; font-size:10px; }
+  .btn-del:hover { background:#fef2f2; }
+
+  .layout { display:flex; gap:20px; align-items:flex-start; }
+
+  /* Monthly sidebar */
+  .monthly-sidebar { width:260px; flex-shrink:0; position:sticky; top:20px; }
+  .monthly-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:12px; }
+  .monthly-card h2 { font-size:14px; color:var(--pri); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+  .month-goal { padding:8px 10px; background:var(--pri-light); border-radius:var(--radius-sm); margin-bottom:6px; font-size:12px; display:flex; justify-content:space-between; align-items:center; }
+  .month-goal .progress { font-size:11px; color:var(--pri); font-weight:700; }
+  .month-goal input { border:none; background:transparent; font-size:12px; width:100%; outline:none; }
+
+  /* Main area */
+  .main { flex:1; min-width:0; }
+
+  /* Week header */
+  .week-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .week-header h2 { font-size:18px; }
+  .week-goals { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .week-goal-tag { padding:4px 10px; background:#fff; border:1px solid var(--border); border-radius:12px; font-size:11px; cursor:pointer; white-space:nowrap; }
+  .week-goal-tag.linked { border-color:var(--pri); background:var(--pri-light); }
+
+  /* Day cards grid */
+  .days-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:12px; }
+  .day-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+  .day-card.today { border-color:var(--pri); box-shadow:0 0 0 2px var(--pri-light); }
+  .day-card-header { padding:10px 12px; font-weight:700; font-size:13px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .day-card-header .date-num { font-size:20px; }
+
+  .time-block { padding:8px 10px; border-bottom:1px solid var(--border); min-height:50px; }
+  .time-block:last-child { border-bottom:none; }
+  .time-block-label { font-size:10px; font-weight:700; text-transform:uppercase; margin-bottom:4px; display:flex; align-items:center; gap:4px; }
+  .time-block-label .dot { width:6px; height:6px; border-radius:50%; display:inline-block; }
+  .time-block.morning { background:var(--morning); }
+  .time-block.morning .dot { background:var(--morning-tag); }
+  .time-block.afternoon { background:var(--afternoon); }
+  .time-block.afternoon .dot { background:var(--afternoon-tag); }
+  .time-block.evening { background:var(--evening); }
+  .time-block.evening .dot { background:var(--evening-tag); }
+
+  .task-item { display:flex; align-items:center; gap:6px; padding:3px 0; font-size:12px; }
+  .task-item input[type="checkbox"] { accent-color:var(--done); }
+  .task-item .task-text { flex:1; cursor:pointer; }
+  .task-item .task-text.done { text-decoration:line-through; color:var(--text3); }
+  .task-item .task-link { font-size:9px; padding:1px 4px; border-radius:3px; background:var(--pri-light); color:var(--pri); cursor:pointer; white-space:nowrap; }
+
+  .add-task { margin-top:4px; }
+  .add-task input { width:100%; border:1px dashed var(--border); background:transparent; padding:3px 6px; border-radius:var(--radius-sm); font-size:11px; outline:none; }
+  .add-task input:focus { border-color:var(--pri); border-style:solid; }
+
+  /* Modal */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:100; }
+  .modal { background:#fff; border-radius:var(--radius); padding:24px; width:420px; max-height:80vh; overflow-y:auto; }
+  .modal h3 { margin-bottom:12px; }
+  .modal select, .modal input { width:100%; padding:8px; border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:8px; font-size:13px; }
+  .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
+
+  .empty-hint { color:var(--text3); font-size:11px; }
+  .summary-bar { display:flex; gap:16px; margin-bottom:16px; flex-wrap:wrap; }
+  .summary-item { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:10px 16px; min-width:80px; text-align:center; }
+  .summary-item .val { font-size:22px; font-weight:800; color:var(--pri); }
+  .summary-item .lbl { font-size:11px; color:var(--text2); }
+
+  @media (max-width:900px) {
+    .layout { flex-direction:column; }
+    .monthly-sidebar { width:100%; position:static; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>日程管理 — 月→周→日 三重对齐</h1>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-out" onclick="goToToday()">今天</button>
+      <button class="btn btn-out" onclick="addMonthlyGoal()">+ 月度目标</button>
+      <button class="btn btn-out" onclick="addWeekGoal()">+ 本周目标</button>
+      <button class="btn btn-pri" onclick="exportMD()">导出 MD</button>
+    </div>
+  </header>
+
+  <!-- Summary bar -->
+  <div class="summary-bar">
+    <div class="summary-item"><div class="val" id="sTotal">0</div><div class="lbl">本周总任务</div></div>
+    <div class="summary-item"><div class="val" id="sDone">0</div><div class="lbl">已完成</div></div>
+    <div class="summary-item"><div class="val" id="sRate">0%</div><div class="lbl">完成率</div></div>
+    <div class="summary-item"><div class="val" id="sMonth">0</div><div class="lbl">月度目标数</div></div>
+  </div>
+
+  <div class="layout">
+    <!-- Monthly sidebar -->
+    <aside class="monthly-sidebar" id="monthlySidebar">
+      <div class="monthly-card">
+        <h2>📅 月度目标 <button class="btn btn-sm btn-out" onclick="addMonthlyGoal()">+</button></h2>
+        <div id="monthlyGoalsList"></div>
+      </div>
+      <div class="monthly-card">
+        <h2>🎯 本周目标 <button class="btn btn-sm btn-out" onclick="addWeekGoal()">+</button></h2>
+        <div id="weekGoalsSidebar"></div>
+      </div>
+    </aside>
+
+    <!-- Main week view -->
+    <div class="main">
+      <div class="week-header">
+        <h2 id="weekTitle">本周</h2>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-sm btn-out" onclick="shiftWeek(-1)">←</button>
+          <button class="btn btn-sm btn-out" onclick="shiftWeek(1)">→</button>
+        </div>
+      </div>
+      <div class="week-goals" id="weekGoalTags"></div>
+      <div class="days-grid" id="daysGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Link task modal -->
+<div class="modal-overlay" id="linkModal" style="display:none">
+  <div class="modal">
+    <h3>关联任务到周/月目标</h3>
+    <label>本周目标</label>
+    <select id="linkWeekGoal"><option value="">-- 无 --</option></select>
+    <label>月度目标</label>
+    <select id="linkMonthGoal"><option value="">-- 无 --</option></select>
+    <div class="modal-actions">
+      <button class="btn btn-out" onclick="closeLinkModal()">取消</button>
+      <button class="btn btn-pri" onclick="saveTaskLink()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Week goal modal -->
+<div class="modal-overlay" id="weekGoalModal" style="display:none">
+  <div class="modal">
+    <h3 id="weekGoalModalTitle">新增本周目标</h3>
+    <input id="weekGoalInput" placeholder="本周目标...">
+    <label>关联月度目标</label>
+    <select id="weekLinkMonth"><option value="">-- 无 --</option></select>
+    <div class="modal-actions">
+      <button class="btn btn-out" onclick="closeWeekGoalModal()">取消</button>
+      <button class="btn btn-pri" onclick="saveWeekGoal()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============= DATA =============
+const STORAGE = 'schedule_data_v2';
+
+let data = {
+  monthlyGoals: [],     // { id, text, done }
+  weekGoals: [],        // { id, text, monthlyId, done }
+  tasks: {},            // { "2026-05-26-morning-0": { text, done, weekGoalId, monthGoalId } }
+  currentWeekStart: '', // ISO Monday
+};
+
+function save() {
+  localStorage.setItem(STORAGE, JSON.stringify(data));
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE);
+    if (raw) data = JSON.parse(raw);
+  } catch(e) {}
+  // Defaults
+  if (!data.monthlyGoals) data.monthlyGoals = [];
+  if (!data.weekGoals) data.weekGoals = [];
+  if (!data.tasks) data.tasks = {};
+  if (!data.currentWeekStart) data.currentWeekStart = getMonday(new Date());
+}
+
+// ============= HELPERS =============
+function getMonday(d) {
+  const dt = new Date(d);
+  dt.setHours(0,0,0,0);
+  const day = dt.getDay() || 7;
+  dt.setDate(dt.getDate() - day + 1);
+  return dt.toISOString().slice(0,10);
+}
+
+function getWeekDates() {
+  const d = new Date(data.currentWeekStart + 'T00:00:00');
+  const days = [];
+  for (let i=0; i<7; i++) {
+    const dd = new Date(d);
+    dd.setDate(d.getDate() + i);
+    days.push(dd.toISOString().slice(0,10));
+  }
+  return days;
+}
+
+function getDayName(dateStr) {
+  const names = ['周一','周二','周三','周四','周五','周六','周日'];
+  return names[new Date(dateStr + 'T00:00:00').getDay() - 1] || names[6];
+}
+
+function isToday(dateStr) {
+  const today = new Date().toISOString().slice(0,10);
+  return dateStr === today;
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function getTodayMonday() {
+  return getMonday(new Date());
+}
+
+// ============= RENDER =============
+function renderAll() {
+  renderMonthlyGoals();
+  renderWeekGoalTags();
+  renderWeekGoalSidebar();
+  renderDays();
+  renderSummary();
+}
+
+function renderMonthlyGoals() {
+  const el = document.getElementById('monthlyGoalsList');
+  if (!data.monthlyGoals.length) {
+    el.innerHTML = '<div class="empty-hint">暂无月度目标，点击 + 添加</div>';
+    return;
+  }
+  el.innerHTML = data.monthlyGoals.map((g, i) => `
+    <div class="month-goal">
+      <span contenteditable="true" onblur="updateMonthlyGoal('${g.id}', this.textContent)" style="text-decoration:${g.done?'line-through':'none'};color:${g.done?'var(--text3)':'var(--text)'}">${esc(g.text)}</span>
+      <span style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+        <span class="progress">${calcMonthlyProgress(g.id)}%</span>
+        <button class="btn btn-sm btn-done" onclick="toggleMonthlyDone('${g.id}')" title="完成">✓</button>
+        <button class="btn btn-del" onclick="deleteMonthlyGoal('${g.id}')">✕</button>
+      </span>
+    </div>
+  `).join('');
+}
+
+function renderWeekGoalTags() {
+  const el = document.getElementById('weekGoalTags');
+  el.innerHTML = data.weekGoals.map(g => `
+    <span class="week-goal-tag ${g.monthlyId ? 'linked' : ''}">
+      ${esc(g.text)}
+      <button class="btn btn-del" onclick="deleteWeekGoal('${g.id}')" style="margin-left:4px">✕</button>
+    </span>
+  `).join('');
+}
+
+function renderWeekGoalSidebar() {
+  const el = document.getElementById('weekGoalsSidebar');
+  if (!data.weekGoals.length) {
+    el.innerHTML = '<div class="empty-hint">暂无周目标</div>';
+    return;
+  }
+  el.innerHTML = data.weekGoals.map(g => {
+    const mGoal = data.monthlyGoals.find(m => m.id === g.monthlyId);
+    return `
+      <div class="month-goal">
+        <span>${esc(g.text)}</span>
+        ${mGoal ? `<span style="font-size:10px;color:var(--text3)">← ${esc(mGoal.text).slice(0,15)}</span>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderDays() {
+  const days = getWeekDates();
+  document.getElementById('weekTitle').textContent = `${days[0]} ~ ${days[6]}`;
+  const el = document.getElementById('daysGrid');
+  el.innerHTML = days.map(dateStr => {
+    const blocks = [
+      { key: 'morning', label: '上午', cls: 'morning' },
+      { key: 'afternoon', label: '下午', cls: 'afternoon' },
+      { key: 'evening', label: '晚上', cls: 'evening' },
+    ];
+    const d = new Date(dateStr + 'T00:00:00');
+    const dayHeader = `${d.getMonth()+1}/${d.getDate()} ${getDayName(dateStr)}`;
+    const today = isToday(dateStr);
+    return `
+      <div class="day-card ${today ? 'today' : ''}">
+        <div class="day-card-header">
+          <span>${dayHeader}</span>
+          <span class="date-num">${d.getDate()}</span>
+        </div>
+        ${blocks.map(b => {
+          const tasks = getTasks(dateStr, b.key);
+          return `
+            <div class="time-block ${b.cls}">
+              <div class="time-block-label"><span class="dot"></span> ${b.label}</div>
+              ${tasks.map(t => renderTaskItem(t, dateStr, b.key)).join('')}
+              <div class="add-task">
+                <input placeholder="+ 添加任务..." onkeypress="addTask(event, '${dateStr}', '${b.key}', this)">
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderSummary() {
+  const days = getWeekDates();
+  let total = 0, done = 0;
+  const blocks = ['morning','afternoon','evening'];
+  days.forEach(d => blocks.forEach(b => {
+    getTasks(d, b).forEach(t => { total++; if (t.done) done++; });
+  }));
+  document.getElementById('sTotal').textContent = total;
+  document.getElementById('sDone').textContent = done;
+  document.getElementById('sRate').textContent = total ? Math.round(done/total*100) + '%' : '0%';
+  document.getElementById('sMonth').textContent = data.monthlyGoals.length;
+}
+
+function getTasks(dateStr, blockKey) {
+  const prefix = `${dateStr}-${blockKey}-`;
+  return Object.entries(data.tasks)
+    .filter(([k]) => k.startsWith(prefix))
+    .map(([k, v]) => ({ key: k, ...v }))
+    .sort((a,b) => (a.order||0) - (b.order||0));
+}
+
+function renderTaskItem(t, dateStr, blockKey) {
+  const wGoal = data.weekGoals.find(g => g.id === t.weekGoalId);
+  const mGoal = data.monthlyGoals.find(g => g.id === t.monthGoalId);
+  return `
+    <div class="task-item">
+      <input type="checkbox" ${t.done ? 'checked' : ''} onchange="toggleTask('${t.key}')">
+      <span class="task-text ${t.done ? 'done' : ''}" title="${t.text}">${esc(t.text)}</span>
+      ${wGoal ? `<span class="task-link" onclick="openLinkModal('${t.key}')" title="${esc(wGoal.text)}">W</span>` : ''}
+      ${mGoal ? `<span class="task-link" style="background:#fef3c7;color:#d97706" onclick="openLinkModal('${t.key}')" title="${esc(mGoal.text)}">M</span>` : ''}
+      ${!wGoal && !mGoal ? `<span class="task-link" style="background:#f3f4f6;color:#9ca3af" onclick="openLinkModal('${t.key}')">+</span>` : ''}
+      <button class="btn btn-del" onclick="deleteTask('${t.key}')">✕</button>
+    </div>
+  `;
+}
+
+// ============= TASK OPERATIONS =============
+function addTask(e, dateStr, blockKey, input) {
+  if (e.key !== 'Enter') return;
+  const text = input.value.trim();
+  if (!text) return;
+  const key = `${dateStr}-${blockKey}-${uid()}`;
+  data.tasks[key] = { text, done: false, weekGoalId: null, monthGoalId: null, order: Date.now() };
+  input.value = '';
+  save(); renderAll();
+}
+
+function toggleTask(key) {
+  if (data.tasks[key]) data.tasks[key].done = !data.tasks[key].done;
+  save(); renderAll();
+}
+
+function deleteTask(key) {
+  delete data.tasks[key];
+  save(); renderAll();
+}
+
+let linkingTaskKey = null;
+function openLinkModal(key) {
+  linkingTaskKey = key;
+  const t = data.tasks[key];
+  // Populate selects
+  const wSelect = document.getElementById('linkWeekGoal');
+  wSelect.innerHTML = '<option value="">-- 无 --</option>' + data.weekGoals.map(g => `<option value="${g.id}" ${t.weekGoalId===g.id?'selected':''}>${esc(g.text)}</option>`).join('');
+  const mSelect = document.getElementById('linkMonthGoal');
+  mSelect.innerHTML = '<option value="">-- 无 --</option>' + data.monthlyGoals.map(g => `<option value="${g.id}" ${t.monthGoalId===g.id?'selected':''}>${esc(g.text)}</option>`).join('');
+  document.getElementById('linkModal').style.display = 'flex';
+}
+function closeLinkModal() { document.getElementById('linkModal').style.display = 'none'; linkingTaskKey = null; }
+
+function saveTaskLink() {
+  if (!linkingTaskKey) return;
+  const t = data.tasks[linkingTaskKey];
+  t.weekGoalId = document.getElementById('linkWeekGoal').value || null;
+  t.monthGoalId = document.getElementById('linkMonthGoal').value || null;
+  save(); renderAll(); closeLinkModal();
+}
+
+// ============= GOAL OPERATIONS =============
+function addMonthlyGoal() {
+  const id = uid();
+  data.monthlyGoals.push({ id, text: '新月度目标', done: false });
+  save(); renderAll();
+}
+function updateMonthlyGoal(id, text) {
+  const g = data.monthlyGoals.find(g => g.id === id);
+  if (g) { g.text = text; save(); }
+}
+function toggleMonthlyDone(id) {
+  const g = data.monthlyGoals.find(g => g.id === id);
+  if (g) { g.done = !g.done; save(); renderAll(); }
+}
+function deleteMonthlyGoal(id) {
+  if (!confirm('删除月度目标？关联的周目标和任务不受影响。')) return;
+  data.monthlyGoals = data.monthlyGoals.filter(g => g.id !== id);
+  save(); renderAll();
+}
+
+function addWeekGoal() {
+  document.getElementById('weekGoalModalTitle').textContent = '新增本周目标';
+  document.getElementById('weekGoalInput').value = '';
+  document.getElementById('weekGoalModal').style.display = 'flex';
+  const mSelect = document.getElementById('weekLinkMonth');
+  mSelect.innerHTML = '<option value="">-- 无 --</option>' + data.monthlyGoals.map(g => `<option value="${g.id}">${esc(g.text)}</option>`).join('');
+}
+function closeWeekGoalModal() { document.getElementById('weekGoalModal').style.display = 'none'; }
+function saveWeekGoal() {
+  const text = document.getElementById('weekGoalInput').value.trim();
+  if (!text) return;
+  const monthlyId = document.getElementById('weekLinkMonth').value || null;
+  data.weekGoals.push({ id: uid(), text, monthlyId, done: false });
+  save(); renderAll(); closeWeekGoalModal();
+}
+function deleteWeekGoal(id) {
+  if (!confirm('删除本周目标？关联的任务不会删除。')) return;
+  data.weekGoals = data.weekGoals.filter(g => g.id !== id);
+  save(); renderAll();
+}
+
+function calcMonthlyProgress(monthId) {
+  const weekGoalIds = data.weekGoals.filter(g => g.monthlyId === monthId).map(g => g.id);
+  let total = 0, done = 0;
+  Object.values(data.tasks).forEach(t => {
+    if (t.monthGoalId === monthId || weekGoalIds.includes(t.weekGoalId)) {
+      total++; if (t.done) done++;
+    }
+  });
+  return total ? Math.round(done/total*100) : 0;
+}
+
+// ============= NAVIGATION =============
+function shiftWeek(delta) {
+  const d = new Date(data.currentWeekStart + 'T00:00:00');
+  d.setDate(d.getDate() + delta * 7);
+  data.currentWeekStart = getMonday(d);
+  save(); renderAll();
+}
+function goToToday() {
+  data.currentWeekStart = getTodayMonday();
+  save(); renderAll();
+}
+
+// ============= EXPORT =============
+function exportMD() {
+  const days = getWeekDates();
+  let md = `# 周报 ${days[0]} ~ ${days[6]}\n\n`;
+  if (data.monthlyGoals.length) {
+    md += '## 月度目标\n';
+    data.monthlyGoals.forEach(g => md += `- [${g.done?'x':' '}] ${g.text}\n`);
+    md += '\n';
+  }
+  md += '## 每日记录\n\n';
+  days.forEach(d => {
+    md += `### ${d} ${getDayName(d)}\n`;
+    ['morning','afternoon','evening'].forEach(b => {
+      const tasks = getTasks(d, b);
+      if (!tasks.length) return;
+      md += `**${b==='morning'?'上午':b==='afternoon'?'下午':'晚上'}**\n`;
+      tasks.forEach(t => md += `- [${t.done?'x':' '}] ${t.text}\n`);
+    });
+    md += '\n';
+  });
+  navigator.clipboard.writeText(md);
+  alert('已复制 Markdown 到剪贴板');
+}
+
+function esc(s) { return s.replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ============= INIT =============
+load();
+if (!data.currentWeekStart || new Date(data.currentWeekStart) < new Date('2026-01-01')) {
+  data.currentWeekStart = getMonday(new Date());
+  save();
+}
+renderAll();
+</script>
+</body>
+</html>
